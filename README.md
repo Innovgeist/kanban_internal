@@ -2,6 +2,12 @@
 
 A full-featured multi-user, multi-project Kanban board backend built with Node.js, Express, TypeScript, and MongoDB.
 
+## 📚 Documentation
+
+- **`COMPLETE_SYSTEM_DOCUMENTATION.md`** - **START HERE** - Complete system understanding, workflows, business logic, and implementation guidelines (for AI agents and developers)
+- **`API_DOCUMENTATION.md`** - Complete API reference with all endpoints, examples, and error codes (for frontend developers)
+- **`QUICK_START_GUIDE.md`** - Quick reference for common tasks and critical rules
+
 ## Features
 
 - ✅ User authentication with JWT (Access + Refresh tokens)
