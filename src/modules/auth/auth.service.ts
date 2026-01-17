@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { User } from '../users/user.model';
 import { AppError } from '../../utils/errors';
 import { config } from '../../config/env';
@@ -17,15 +17,17 @@ export interface AuthTokens {
 
 export class AuthService {
   private static generateAccessToken(payload: TokenPayload): string {
-    return jwt.sign(payload, config.jwt.accessSecret, {
+    const options: SignOptions = {
       expiresIn: config.jwt.accessExpiresIn,
-    });
+    };
+    return jwt.sign(payload, config.jwt.accessSecret, options);
   }
 
   private static generateRefreshToken(payload: TokenPayload): string {
-    return jwt.sign(payload, config.jwt.refreshSecret, {
+    const options: SignOptions = {
       expiresIn: config.jwt.refreshExpiresIn,
-    });
+    };
+    return jwt.sign(payload, config.jwt.refreshSecret, options);
   }
 
   static async register(

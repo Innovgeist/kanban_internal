@@ -9,8 +9,6 @@
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
     "create-superadmin": "ts-node scripts/create-superadmin.ts",
-    "test-api": "ts-node scripts/test-api.ts",
-    "test-comprehensive": "ts-node scripts/comprehensive-test.ts",
     "vercel-build": "tsc"
   },
   "keywords": ["kanban", "backend", "nodejs", "mongodb"],
@@ -25,8 +23,7 @@
     "winston": "^3.11.0",
     "dotenv": "^16.3.1",
     "express-rate-limit": "^7.1.5",
-    "cors": "^2.8.5",
-    "axios": "^1.6.0"
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "@types/express": "^4.17.20",
