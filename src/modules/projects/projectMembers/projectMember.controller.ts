@@ -6,8 +6,12 @@ export class ProjectMemberController {
     try {
       const { projectId } = req.params;
       const { email, role } = req.body;
+      const addedBy = {
+        userId: req.user!._id,
+        role: req.user!.role || 'USER',
+      };
 
-      const member = await ProjectMemberService.addMember(projectId, email, role);
+      const member = await ProjectMemberService.addMember(projectId, email, role, addedBy);
 
       res.status(201).json({
         success: true,

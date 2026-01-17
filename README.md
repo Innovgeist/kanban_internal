@@ -5,8 +5,10 @@ A full-featured multi-user, multi-project Kanban board backend built with Node.j
 ## Features
 
 - ✅ User authentication with JWT (Access + Refresh tokens)
-- ✅ Multi-user support
-- ✅ Multi-project support with role-based access (ADMIN/MEMBER)
+- ✅ **SuperAdmin role** - System-level administrator who can create projects
+- ✅ **Project Manager (ADMIN)** - Project-level administrator who can manage members
+- ✅ Multi-user support with role-based access (SUPERADMIN/USER at system level, ADMIN/MEMBER at project level)
+- ✅ Multi-project support
 - ✅ Project member management
 - ✅ Board creation and management
 - ✅ Column management with reordering
@@ -87,26 +89,45 @@ npm run dev
 npm start
 ```
 
+## Role System
+
+### System-Level Roles
+- **SUPERADMIN**: Can create projects and assign project managers
+- **USER**: Regular user (default role)
+
+### Project-Level Roles
+- **ADMIN** (Project Manager): Can add/remove members within their project
+- **MEMBER**: Regular project member
+
+### Role Hierarchy
+1. **SuperAdmin** creates a project
+2. **SuperAdmin** assigns a **Project Manager (ADMIN)** to the project (optional during creation)
+3. **Project Manager (ADMIN)** can add/remove members (as MEMBER or ADMIN) within their project
+4. **SuperAdmin** can also add/remove members to any project and assign project managers
+
 ## API Endpoints
 
 ### Authentication
 
-- `POST /auth/register` - Register a new user
+- `POST /auth/register` - Register a new user (defaults to USER role)
 - `POST /auth/login` - Login user
 - `POST /auth/refresh` - Refresh access token
 - `POST /auth/logout` - Logout user
 
 ### Projects
 
-- `POST /projects` - Create a new project
+- `POST /projects` - Create a new project (**SuperAdmin only**)
+  - Body: `{ name, projectManagerEmail? }` - Optional project manager email
 - `GET /projects` - Get all user's projects
 - `GET /projects/:projectId` - Get project by ID
 
 ### Project Members
 
 - `GET /projects/:projectId/members` - Get all project members
-- `POST /projects/:projectId/members` - Add member (ADMIN only)
-- `DELETE /projects/:projectId/members/:userId` - Remove member (ADMIN only)
+- `POST /projects/:projectId/members` - Add member (SuperAdmin or Project Admin)
+  - Body: `{ email, role }` - role can be 'ADMIN' (project manager) or 'MEMBER'
+  - **Note**: Only SuperAdmin can assign ADMIN role (project manager)
+- `DELETE /projects/:projectId/members/:userId` - Remove member (SuperAdmin or Project Admin)
 
 ### Boards
 
@@ -149,6 +170,68 @@ Authorization: Bearer <access_token>
   "data": { ... }
 }
 ```
+
+## Creating the First SuperAdmin
+
+To create the first SuperAdmin user, you need to manually update the database or use a script. Here's how:
+
+### Option 1: Using MongoDB Shell
+
+```javascript
+// Connect to your MongoDB database
+use kanban_board
+
+// Update a user to SuperAdmin (replace with actual user email)
+db.users.updateOne(
+  { email: "admin@example.com" },
+  { $set: { role: "SUPERADMIN" } }
+)
+```
+
+### Option 2: Using a Script
+
+Create a script file `scripts/create-superadmin.ts`:
+
+```typescript
+import mongoose from 'mongoose';
+import { User } from '../src/modules/users/user.model';
+import { config } from '../src/config/env';
+
+async function createSuperAdmin() {
+  await mongoose.connect(config.mongodbUri);
+  
+  const email = process.argv[2];
+  if (!email) {
+    console.error('Please provide an email: npm run create-superadmin <email>');
+    process.exit(1);
+  }
+
+  const user = await User.findOneAndUpdate(
+    { email: email.toLowerCase() },
+    { role: 'SUPERADMIN' },
+    { new: true }
+  );
+
+  if (!user) {
+    console.error('User not found with email:', email);
+    process.exit(1);
+  }
+
+  console.log('SuperAdmin created successfully:', user.email);
+  await mongoose.disconnect();
+}
+
+createSuperAdmin();
+```
+
+Then add to `package.json`:
+```json
+"scripts": {
+  "create-superadmin": "ts-node scripts/create-superadmin.ts"
+}
+```
+
+Run: `npm run create-superadmin admin@example.com`
 
 ## License
 

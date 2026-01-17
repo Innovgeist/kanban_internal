@@ -1,22 +1,40 @@
 import { Project } from './project.model';
-import { ProjectMember } from './projectMembers/projectMember.model';
+import { ProjectMember, ProjectRole } from './projectMembers/projectMember.model';
 import { AppError } from '../../utils/errors';
 import { User } from '../users/user.model';
 
 export class ProjectService {
-  static async createProject(name: string, createdBy: string) {
+  static async createProject(
+    name: string,
+    createdBy: string,
+    projectManagerEmail?: string
+  ) {
+    // Verify creator is SUPERADMIN
+    const creator = await User.findById(createdBy);
+    if (!creator || creator.role !== 'SUPERADMIN') {
+      throw new AppError('Only SuperAdmin can create projects', 403, 'SUPERADMIN_REQUIRED');
+    }
+
     // Create project
     const project = await Project.create({
       name,
       createdBy,
     });
 
-    // Create ProjectMember with ADMIN role
-    await ProjectMember.create({
-      projectId: project._id,
-      userId: createdBy,
-      role: 'ADMIN',
-    });
+    // If project manager email is provided, assign them as ADMIN
+    if (projectManagerEmail) {
+      const projectManager = await User.findOne({ email: projectManagerEmail.toLowerCase() });
+      if (!projectManager) {
+        throw new AppError('Project manager not found', 404, 'PROJECT_MANAGER_NOT_FOUND');
+      }
+
+      // Create ProjectMember with ADMIN role for project manager
+      await ProjectMember.create({
+        projectId: project._id,
+        userId: projectManager._id,
+        role: 'ADMIN',
+      });
+    }
 
     return project;
   }

@@ -7,6 +7,24 @@ import { Card } from '../modules/projects/boards/columns/cards/card.model';
 import { AppError } from '../utils/errors';
 import { validateObjectId } from '../utils/validation';
 
+export const requireSuperAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userRole = req.user?.role;
+
+    if (userRole !== 'SUPERADMIN') {
+      throw new AppError('Access denied: SuperAdmin role required', 403, 'SUPERADMIN_REQUIRED');
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const requireProjectMember = async (
   req: Request,
   res: Response,
@@ -28,6 +46,12 @@ export const requireProjectMember = async (
     const project = await Project.findById(projectId);
     if (!project) {
       throw new AppError('Project not found', 404, 'PROJECT_NOT_FOUND');
+    }
+
+    // SUPERADMIN bypasses project membership check
+    if (req.user?.role === 'SUPERADMIN') {
+      next();
+      return;
     }
 
     // Check if user is a member
@@ -54,6 +78,12 @@ export const requireProjectAdmin = async (
   next: NextFunction
 ) => {
   try {
+    // SUPERADMIN bypasses project admin check
+    if (req.user?.role === 'SUPERADMIN') {
+      next();
+      return;
+    }
+
     // First check project membership
     const projectId = req.params.projectId;
     const userId = req.user?._id;

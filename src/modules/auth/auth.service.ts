@@ -7,6 +7,7 @@ import { config } from '../../config/env';
 export interface TokenPayload {
   userId: string;
   email: string;
+  role?: string;
 }
 
 export interface AuthTokens {
@@ -53,6 +54,7 @@ export class AuthService {
     const payload: TokenPayload = {
       userId: user._id.toString(),
       email: user.email,
+      role: user.role,
     };
 
     const tokens: AuthTokens = {
@@ -65,6 +67,7 @@ export class AuthService {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
         createdAt: user.createdAt,
       },
       tokens,
@@ -91,6 +94,7 @@ export class AuthService {
     const payload: TokenPayload = {
       userId: user._id.toString(),
       email: user.email,
+      role: user.role,
     };
 
     const tokens: AuthTokens = {
@@ -103,6 +107,7 @@ export class AuthService {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
         createdAt: user.createdAt,
       },
       tokens,
@@ -119,6 +124,7 @@ export class AuthService {
       const payload: TokenPayload = {
         userId: decoded.userId,
         email: decoded.email,
+        role: decoded.role,
       };
 
       return {

@@ -4,10 +4,10 @@ import { ProjectService } from './project.service';
 export class ProjectController {
   static async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name } = req.body;
+      const { name, projectManagerEmail } = req.body;
       const userId = req.user!._id;
 
-      const project = await ProjectService.createProject(name, userId);
+      const project = await ProjectService.createProject(name, userId, projectManagerEmail);
 
       res.status(201).json({
         success: true,

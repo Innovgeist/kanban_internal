@@ -7,7 +7,8 @@ export class ProjectMemberService {
   static async addMember(
     projectId: string,
     email: string,
-    role: ProjectRole
+    role: ProjectRole,
+    addedBy: { userId: string; role: string }
   ) {
     // Find user by email
     const user = await User.findOne({ email: email.toLowerCase() });
@@ -28,6 +29,11 @@ export class ProjectMemberService {
     });
     if (existingMember) {
       throw new AppError('User is already a member of this project', 400, 'MEMBER_EXISTS');
+    }
+
+    // SuperAdmin can assign ADMIN role (project manager), regular ADMIN can only assign MEMBER
+    if (role === 'ADMIN' && addedBy.role !== 'SUPERADMIN') {
+      throw new AppError('Only SuperAdmin can assign project managers (ADMIN role)', 403, 'SUPERADMIN_REQUIRED');
     }
 
     // Create membership
