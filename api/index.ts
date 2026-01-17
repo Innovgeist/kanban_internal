@@ -18,7 +18,9 @@ const connectDB = async () => {
   }
 };
 
+// Vercel serverless function handler
 export default async (req: any, res: any) => {
   await connectDB();
+  // Express app handles the request
   return app(req, res);
 };
