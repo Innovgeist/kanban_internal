@@ -10,6 +10,8 @@ const router = express.Router({ mergeParams: true });
 router.use(authenticate);
 router.use(requireProjectMember);
 
+router.get('/', BoardController.getByProject);
+
 router.post(
   '/',
   validateRequest(createBoardSchema),

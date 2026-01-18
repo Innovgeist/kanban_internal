@@ -18,6 +18,20 @@ export class BoardController {
     }
   }
 
+  static async getByProject(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { projectId } = req.params;
+      const boards = await BoardService.getBoardsByProject(projectId);
+
+      res.status(200).json({
+        success: true,
+        data: boards,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const { boardId } = req.params;

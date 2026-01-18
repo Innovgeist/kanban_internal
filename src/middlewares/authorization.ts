@@ -33,6 +33,7 @@ export const requireProjectMember = async (
   try {
     const projectId = req.params.projectId;
     const userId = req.user?._id;
+    const userRole = req.user?.role;
 
     if (!userId) {
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
@@ -48,10 +49,9 @@ export const requireProjectMember = async (
       throw new AppError('Project not found', 404, 'PROJECT_NOT_FOUND');
     }
 
-    // SUPERADMIN bypasses project membership check
-    if (req.user?.role === 'SUPERADMIN') {
-      next();
-      return;
+    // SuperAdmin can access any project they created
+    if (userRole === 'SUPERADMIN' && project.createdBy.toString() === userId) {
+      return next();
     }
 
     // Check if user is a member

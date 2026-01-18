@@ -13,6 +13,14 @@ export class BoardService {
     return board;
   }
 
+  static async getBoardsByProject(projectId: string) {
+    const boards = await Board.find({ projectId })
+      .sort({ createdAt: -1 }) // Newest first
+      .lean();
+
+    return boards;
+  }
+
   static async getBoardById(boardId: string) {
     const board = await Board.findById(boardId);
     if (!board) {
