@@ -278,7 +278,42 @@ export const requireCardAccess = async (
   next: NextFunction
 ) => {
   try {
-    const cardId = req.params.cardId;
+    // Try to get cardId from params (could be cardId or id)
+    let cardId = req.params.cardId || req.params.id;
+    
+    // If not in params, extract from URL path
+    // Note: req.path is relative to the router mount point, so /cards/:cardId/move becomes /:cardId/move
+    // The path will be like /696c848bb40087485632516d/move (without /cards prefix)
+    if (!cardId) {
+      // Check req.path (relative to router mount) - should be /{cardId}/move
+      // Match exactly 24 hex characters (MongoDB ObjectId format)
+      const pathStr = req.path || '';
+      const pathMatch = pathStr.match(/^\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+      if (pathMatch && pathMatch[1]) {
+        cardId = pathMatch[1];
+      } else {
+        // Fallback to req.originalUrl (full path from root) - includes /cards prefix
+        const originalUrlStr = req.originalUrl || '';
+        const originalMatch = originalUrlStr.match(/\/(?:api\/)?cards\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+        if (originalMatch && originalMatch[1]) {
+          cardId = originalMatch[1];
+        } else {
+          // Also check req.url (query string might be included)
+          const urlStr = req.url || '';
+          const urlMatch = urlStr.match(/^\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+          if (urlMatch && urlMatch[1]) {
+            cardId = urlMatch[1];
+          } else {
+            // Last resort: extract any 24-char hex string from path
+            const anyMatch = pathStr.match(/([a-fA-F0-9]{24})/);
+            if (anyMatch && anyMatch[1]) {
+              cardId = anyMatch[1];
+            }
+          }
+        }
+      }
+    }
+    
     const userId = req.user?._id;
     const userRole = req.user?.role;
 
@@ -286,12 +321,25 @@ export const requireCardAccess = async (
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
     }
 
-    if (!cardId || !validateObjectId(cardId)) {
-      throw new AppError('Invalid card ID', 400, 'INVALID_CARD_ID');
+    if (!cardId) {
+      throw new AppError(`Invalid card ID. Path: ${req.path}, URL: ${req.url}, Params: ${JSON.stringify(req.params)}`, 400, 'INVALID_CARD_ID');
     }
 
+    // Trim whitespace and validate
+    const trimmedCardId = cardId.trim();
+    if (!validateObjectId(trimmedCardId)) {
+      throw new AppError(`Invalid card ID format: "${trimmedCardId}" (length: ${trimmedCardId.length})`, 400, 'INVALID_CARD_ID');
+    }
+    
+    // Use trimmed ID
+    const finalCardId = trimmedCardId;
+
+    // Store trimmed cardId in request for controller to use
+    (req as any).cardId = finalCardId;
+    req.params.cardId = finalCardId; // Update params too
+
     // Find card and get column
-    const card = await Card.findById(cardId);
+    const card = await Card.findById(finalCardId);
     if (!card) {
       throw new AppError('Card not found', 404, 'CARD_NOT_FOUND');
     }
