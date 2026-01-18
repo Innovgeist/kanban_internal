@@ -132,20 +132,38 @@ export const requireBoardAccess = async (
 ) => {
   try {
     // Try to get boardId from params (could be boardId or id)
-    // Also check the URL path directly if params aren't available yet
     let boardId = req.params.boardId || req.params.id;
     
     // If not in params, extract from URL path
+    // Note: req.path is relative to the router mount point, so /boards/:boardId becomes /:boardId
+    // The path will be like /696c7cadef41bfb675646640 (without /boards prefix)
     if (!boardId) {
-      // Match /boards/{boardId} or /api/boards/{boardId}
-      const pathMatch = req.path.match(/\/(?:api\/)?boards\/([a-fA-F0-9]{24})(?:\/|$)/);
-      if (pathMatch) {
+      // Check req.path (relative to router mount) - should be /{boardId} or /{boardId}/...
+      // Match exactly 24 hex characters (MongoDB ObjectId format)
+      // Try multiple patterns to be safe
+      const pathStr = req.path || '';
+      const pathMatch = pathStr.match(/^\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+      if (pathMatch && pathMatch[1]) {
         boardId = pathMatch[1];
       } else {
-        // Fallback to full URL match
-        const urlMatch = req.url.match(/\/(?:api\/)?boards\/([a-fA-F0-9]{24})(?:\/|$)/);
-        if (urlMatch) {
-          boardId = urlMatch[1];
+        // Fallback to req.originalUrl (full path from root) - includes /boards prefix
+        const originalUrlStr = req.originalUrl || '';
+        const originalMatch = originalUrlStr.match(/\/(?:api\/)?boards\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+        if (originalMatch && originalMatch[1]) {
+          boardId = originalMatch[1];
+        } else {
+          // Also check req.url (query string might be included)
+          const urlStr = req.url || '';
+          const urlMatch = urlStr.match(/^\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+          if (urlMatch && urlMatch[1]) {
+            boardId = urlMatch[1];
+          } else {
+            // Last resort: extract any 24-char hex string from path
+            const anyMatch = pathStr.match(/([a-fA-F0-9]{24})/);
+            if (anyMatch && anyMatch[1]) {
+              boardId = anyMatch[1];
+            }
+          }
         }
       }
     }
