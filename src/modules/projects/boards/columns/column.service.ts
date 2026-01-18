@@ -1,5 +1,6 @@
 import { Column } from './column.model';
 import { Board } from '../board.model';
+import { Card } from './cards/card.model';
 import { ProjectMember } from '../../projectMembers/projectMember.model';
 import { AppError } from '../../../../utils/errors';
 
