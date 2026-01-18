@@ -35,4 +35,12 @@ router.post(
 
 router.post('/logout', AuthController.logout);
 
+// Google OAuth routes
+router.get('/google', AuthController.googleAuth);
+router.get('/google/callback', AuthController.googleCallback);
+
+// Invitation routes
+router.post('/invitation/set-password', AuthController.setPasswordFromInvitation);
+router.get('/invitation/details', AuthController.getInvitationDetails);
+
 export default router;

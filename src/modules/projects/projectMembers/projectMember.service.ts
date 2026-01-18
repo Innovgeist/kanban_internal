@@ -2,6 +2,7 @@ import { ProjectMember, ProjectRole } from './projectMember.model';
 import { User } from '../../users/user.model';
 import { Project } from '../project.model';
 import { AppError } from '../../../utils/errors';
+import crypto from 'crypto';
 
 export class ProjectMemberService {
   static async addMember(
@@ -10,10 +11,27 @@ export class ProjectMemberService {
     role: ProjectRole,
     addedBy: { userId: string; role: string }
   ) {
-    // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() });
+    // Find or create user by email
+    let user = await User.findOne({ email: email.toLowerCase() });
+    
     if (!user) {
-      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+      // User doesn't exist - create account with invitation
+      const invitationToken = crypto.randomBytes(32).toString('hex');
+      const invitationTokenExpires = new Date();
+      invitationTokenExpires.setHours(invitationTokenExpires.getHours() + 24); // 24 hours expiry
+
+      // Extract name from email (before @)
+      const nameFromEmail = email.split('@')[0];
+
+      user = await User.create({
+        name: nameFromEmail,
+        email: email.toLowerCase(),
+        authProvider: 'email',
+        role: 'USER',
+        invitationToken,
+        invitationTokenExpires,
+        // No passwordHash - user must set password via invitation
+      });
     }
 
     // Check if project exists
@@ -43,7 +61,17 @@ export class ProjectMemberService {
       role,
     });
 
-    return member.populate('userId', 'name email');
+    const populatedMember = await member.populate('userId', 'name email');
+    
+    // If user was just created (has invitation token), include it in response
+    const responseData: any = populatedMember.toObject();
+    if (user.invitationToken && !user.passwordHash) {
+      responseData.invitationToken = user.invitationToken;
+      responseData.invitationExpiresAt = user.invitationTokenExpires;
+      responseData.requiresPasswordSetup = true;
+    }
+
+    return responseData;
   }
 
   static async removeMember(projectId: string, userId: string) {

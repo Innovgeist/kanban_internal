@@ -28,6 +28,17 @@ export class AuthService {
     } as jwt.SignOptions);
   }
 
+  /**
+   * Generate both access and refresh tokens
+   * Exposed for use by Google OAuth service
+   */
+  static generateTokens(payload: TokenPayload): AuthTokens {
+    return {
+      accessToken: this.generateAccessToken(payload),
+      refreshToken: this.generateRefreshToken(payload),
+    };
+  }
+
   static async register(
     name: string,
     email: string,
@@ -48,6 +59,7 @@ export class AuthService {
       name,
       email: email.toLowerCase(),
       passwordHash,
+      authProvider: 'email',
     });
 
     // Generate tokens
@@ -82,6 +94,11 @@ export class AuthService {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
+    }
+
+    // Check if user uses email/password auth
+    if (user.authProvider !== 'email' || !user.passwordHash) {
+      throw new AppError('Please sign in with Google', 401, 'USE_GOOGLE_AUTH');
     }
 
     // Verify password
