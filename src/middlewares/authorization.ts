@@ -131,7 +131,8 @@ export const requireBoardAccess = async (
   next: NextFunction
 ) => {
   try {
-    const boardId = req.params.boardId;
+    // Try to get boardId from params (could be boardId or id)
+    const boardId = req.params.boardId || req.params.id;
     const userId = req.user?._id;
     const userRole = req.user?.role;
 
@@ -139,15 +140,28 @@ export const requireBoardAccess = async (
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
     }
 
-    if (!boardId || !validateObjectId(boardId)) {
-      throw new AppError('Invalid board ID', 400, 'INVALID_BOARD_ID');
+    if (!boardId) {
+      throw new AppError('Board ID is required', 400, 'BOARD_ID_REQUIRED');
     }
 
+    // Trim whitespace and validate
+    const trimmedBoardId = boardId.trim();
+    if (!validateObjectId(trimmedBoardId)) {
+      throw new AppError(`Invalid board ID format: "${trimmedBoardId}" (length: ${trimmedBoardId.length})`, 400, 'INVALID_BOARD_ID');
+    }
+    
+    // Use trimmed ID
+    const finalBoardId = trimmedBoardId;
+
     // Find board and check project membership
-    const board = await Board.findById(boardId);
+    const board = await Board.findById(finalBoardId);
     if (!board) {
       throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
     }
+
+    // Store trimmed boardId in request for controller to use
+    (req as any).boardId = finalBoardId;
+    req.params.boardId = finalBoardId; // Update params too
 
     // SuperAdmin can access ALL boards (full access)
     if (userRole === 'SUPERADMIN') {
