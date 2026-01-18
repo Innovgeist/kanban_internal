@@ -38,15 +38,25 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
+// Mount at both root and /api for Vercel compatibility
 app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/projects', projectRoutes);
+app.use('/api/projects', projectRoutes);
 app.use('/projects/:projectId/members', projectMemberRoutes);
+app.use('/api/projects/:projectId/members', projectMemberRoutes);
 app.use('/projects/:projectId/boards', boardRoutes);
+app.use('/api/projects/:projectId/boards', boardRoutes);
 app.use('/boards', boardByIdRouter);
+app.use('/api/boards', boardByIdRouter);
 app.use('/boards/:boardId/columns', columnRoutes);
+app.use('/api/boards/:boardId/columns', columnRoutes);
 app.use('/columns', reorderRouter);
+app.use('/api/columns', reorderRouter);
 app.use('/columns/:columnId/cards', cardRoutes);
+app.use('/api/columns/:columnId/cards', cardRoutes);
 app.use('/cards', moveRouter);
+app.use('/api/cards', moveRouter);
 
 // Error handling (must be last)
 app.use(errorHandler);

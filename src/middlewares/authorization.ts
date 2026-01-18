@@ -49,8 +49,8 @@ export const requireProjectMember = async (
       throw new AppError('Project not found', 404, 'PROJECT_NOT_FOUND');
     }
 
-    // SuperAdmin can access any project they created
-    if (userRole === 'SUPERADMIN' && project.createdBy.toString() === userId) {
+    // SuperAdmin can access ALL projects (full access)
+    if (userRole === 'SUPERADMIN') {
       return next();
     }
 
@@ -133,6 +133,7 @@ export const requireBoardAccess = async (
   try {
     const boardId = req.params.boardId;
     const userId = req.user?._id;
+    const userRole = req.user?.role;
 
     if (!userId) {
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
@@ -146,6 +147,11 @@ export const requireBoardAccess = async (
     const board = await Board.findById(boardId);
     if (!board) {
       throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
+    }
+
+    // SuperAdmin can access ALL boards (full access)
+    if (userRole === 'SUPERADMIN') {
+      return next();
     }
 
     // Check if user is a project member
@@ -172,6 +178,7 @@ export const requireColumnAccess = async (
   try {
     const columnId = req.params.columnId;
     const userId = req.user?._id;
+    const userRole = req.user?.role;
 
     if (!userId) {
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
@@ -191,6 +198,11 @@ export const requireColumnAccess = async (
     const board = await Board.findById(column.boardId);
     if (!board) {
       throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
+    }
+
+    // SuperAdmin can access ALL columns (full access)
+    if (userRole === 'SUPERADMIN') {
+      return next();
     }
 
     // Check if user is a project member
@@ -217,6 +229,7 @@ export const requireCardAccess = async (
   try {
     const cardId = req.params.cardId;
     const userId = req.user?._id;
+    const userRole = req.user?.role;
 
     if (!userId) {
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
@@ -242,6 +255,11 @@ export const requireCardAccess = async (
     const board = await Board.findById(column.boardId);
     if (!board) {
       throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
+    }
+
+    // SuperAdmin can access ALL cards (full access)
+    if (userRole === 'SUPERADMIN') {
+      return next();
     }
 
     // Check if user is a project member

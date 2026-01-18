@@ -1,7 +1,7 @@
 import express from 'express';
 import { ProjectController } from './project.controller';
 import { authenticate } from '../../middlewares/auth';
-import { requireSuperAdmin } from '../../middlewares/authorization';
+import { requireSuperAdmin, requireProjectMember } from '../../middlewares/authorization';
 import { validateRequest } from '../../middlewares/validation';
 import { createProjectSchema } from './project.validation';
 
@@ -17,6 +17,6 @@ router.post(
 );
 
 router.get('/', ProjectController.getUserProjects);
-router.get('/:projectId', ProjectController.getById);
+router.get('/:projectId', requireProjectMember, ProjectController.getById);
 
 export default router;
