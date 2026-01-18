@@ -6,3 +6,9 @@ export const createProjectSchema = z.object({
     projectManagerEmail: z.string().email('Invalid email format').optional(),
   }),
 });
+
+export const updateProjectSchema = z.object({
+  body: z.object({
+    name: z.string().min(1, 'Project name is required').trim(),
+  }),
+});

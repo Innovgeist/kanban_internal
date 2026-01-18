@@ -45,4 +45,35 @@ export class ProjectController {
       next(error);
     }
   }
+
+  static async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { projectId } = req.params;
+      const { name } = req.body;
+
+      const project = await ProjectService.updateProject(projectId, name);
+
+      res.status(200).json({
+        success: true,
+        data: project,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { projectId } = req.params;
+
+      const result = await ProjectService.deleteProject(projectId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

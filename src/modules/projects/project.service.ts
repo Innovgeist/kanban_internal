@@ -1,5 +1,8 @@
 import { Project } from './project.model';
 import { ProjectMember, ProjectRole } from './projectMembers/projectMember.model';
+import { Board } from './boards/board.model';
+import { Column } from './boards/columns/column.model';
+import { Card } from './boards/columns/cards/card.model';
 import { AppError } from '../../utils/errors';
 import { User } from '../users/user.model';
 
@@ -90,5 +93,49 @@ export class ProjectService {
       throw new AppError('Project not found', 404, 'PROJECT_NOT_FOUND');
     }
     return project;
+  }
+
+  static async updateProject(projectId: string, name: string) {
+    const project = await Project.findById(projectId);
+    if (!project) {
+      throw new AppError('Project not found', 404, 'PROJECT_NOT_FOUND');
+    }
+
+    project.name = name.trim();
+    await project.save();
+
+    return project.populate('createdBy', 'name email');
+  }
+
+  static async deleteProject(projectId: string) {
+    const project = await Project.findById(projectId);
+    if (!project) {
+      throw new AppError('Project not found', 404, 'PROJECT_NOT_FOUND');
+    }
+
+    // Get all boards in this project
+    const boards = await Board.find({ projectId });
+    const boardIds = boards.map((b) => b._id);
+
+    // Get all columns in these boards
+    const columns = await Column.find({ boardId: { $in: boardIds } });
+    const columnIds = columns.map((c) => c._id);
+
+    // Delete all cards in these columns
+    await Card.deleteMany({ columnId: { $in: columnIds } });
+
+    // Delete all columns
+    await Column.deleteMany({ boardId: { $in: boardIds } });
+
+    // Delete all boards
+    await Board.deleteMany({ projectId });
+
+    // Delete all project members
+    await ProjectMember.deleteMany({ projectId });
+
+    // Finally, delete the project
+    await Project.findByIdAndDelete(projectId);
+
+    return { message: 'Project deleted successfully' };
   }
 }
