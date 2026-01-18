@@ -48,8 +48,13 @@ export class BoardController {
 
   static async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { boardId } = req.params;
+      // Get boardId from params (set by requireBoardAccess middleware) or extract from path
+      const boardId = (req as any).boardId || req.params.boardId;
       const { name } = req.body;
+
+      if (!boardId) {
+        throw new Error('Board ID is required');
+      }
 
       const board = await BoardService.updateBoard(boardId, name);
 
@@ -64,7 +69,12 @@ export class BoardController {
 
   static async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { boardId } = req.params;
+      // Get boardId from params (set by requireBoardAccess middleware) or extract from path
+      const boardId = (req as any).boardId || req.params.boardId;
+
+      if (!boardId) {
+        throw new Error('Board ID is required');
+      }
 
       const result = await BoardService.deleteBoard(boardId);
 

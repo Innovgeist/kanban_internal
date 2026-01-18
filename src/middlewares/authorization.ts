@@ -137,19 +137,55 @@ export const requireBoardAdmin = async (
     }
 
     // Try to get boardId from params or request (set by requireBoardAccess)
-    const boardId = (req as any).boardId || req.params.boardId;
+    let boardId = (req as any).boardId || req.params.boardId;
+    
+    // If not available, extract from URL path (similar to requireBoardAccess)
+    if (!boardId) {
+      const pathStr = req.path || '';
+      const pathMatch = pathStr.match(/^\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+      if (pathMatch && pathMatch[1]) {
+        boardId = pathMatch[1];
+      } else {
+        const originalUrlStr = req.originalUrl || '';
+        const originalMatch = originalUrlStr.match(/\/(?:api\/)?boards\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+        if (originalMatch && originalMatch[1]) {
+          boardId = originalMatch[1];
+        } else {
+          const urlStr = req.url || '';
+          const urlMatch = urlStr.match(/^\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+          if (urlMatch && urlMatch[1]) {
+            boardId = urlMatch[1];
+          } else {
+            const anyMatch = pathStr.match(/([a-fA-F0-9]{24})/);
+            if (anyMatch && anyMatch[1]) {
+              boardId = anyMatch[1];
+            }
+          }
+        }
+      }
+    }
+    
     const userId = req.user?._id;
 
     if (!userId) {
       throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
     }
 
-    if (!boardId || !validateObjectId(boardId)) {
-      throw new AppError('Invalid board ID', 400, 'INVALID_BOARD_ID');
+    if (!boardId) {
+      throw new AppError(`Invalid board ID. Path: ${req.path}, URL: ${req.url}`, 400, 'INVALID_BOARD_ID');
     }
 
+    const trimmedBoardId = boardId.trim();
+    if (!validateObjectId(trimmedBoardId)) {
+      throw new AppError(`Invalid board ID format: "${trimmedBoardId}"`, 400, 'INVALID_BOARD_ID');
+    }
+
+    // Store in request for controller
+    (req as any).boardId = trimmedBoardId;
+    req.params.boardId = trimmedBoardId;
+
     // Find board and get project
-    const board = await Board.findById(boardId);
+    const board = await Board.findById(trimmedBoardId);
     if (!board) {
       throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
     }
@@ -470,6 +506,10 @@ export const requireCardAccess = async (
     if (!validateObjectId(trimmedCardId)) {
       throw new AppError(`Invalid card ID format: "${trimmedCardId}" (length: ${trimmedCardId.length})`, 400, 'INVALID_CARD_ID');
     }
+    
+    // Store in request for controller
+    (req as any).cardId = trimmedCardId;
+    req.params.cardId = trimmedCardId;
     
     // Use trimmed ID
     const finalCardId = trimmedCardId;

@@ -36,8 +36,13 @@ export class ColumnController {
 
   static async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { columnId } = req.params;
+      // Get columnId from params (set by requireColumnAdmin middleware) or extract from path
+      const columnId = (req as any).columnId || req.params.columnId;
       const { name } = req.body;
+
+      if (!columnId) {
+        throw new Error('Column ID is required');
+      }
 
       const column = await ColumnService.updateColumn(columnId, name);
 
@@ -52,7 +57,12 @@ export class ColumnController {
 
   static async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { columnId } = req.params;
+      // Get columnId from params (set by requireColumnAdmin middleware) or extract from path
+      const columnId = (req as any).columnId || req.params.columnId;
+
+      if (!columnId) {
+        throw new Error('Column ID is required');
+      }
 
       const result = await ColumnService.deleteColumn(columnId);
 

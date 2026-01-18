@@ -37,8 +37,13 @@ export class CardController {
 
   static async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { cardId } = req.params;
+      // Get cardId from params (set by requireCardAccess middleware) or extract from path
+      const cardId = (req as any).cardId || req.params.cardId;
       const { title, description } = req.body;
+
+      if (!cardId) {
+        throw new Error('Card ID is required');
+      }
 
       const card = await CardService.updateCard(cardId, title, description);
 
@@ -53,7 +58,12 @@ export class CardController {
 
   static async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { cardId } = req.params;
+      // Get cardId from params (set by requireCardAccess middleware) or extract from path
+      const cardId = (req as any).cardId || req.params.cardId;
+
+      if (!cardId) {
+        throw new Error('Card ID is required');
+      }
 
       const result = await CardService.deleteCard(cardId);
 
