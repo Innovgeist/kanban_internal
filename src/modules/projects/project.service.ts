@@ -40,12 +40,28 @@ export class ProjectService {
   }
 
   static async getUserProjects(userId: string) {
+    // Check if user is SuperAdmin
+    const user = await User.findById(userId);
+    const isSuperAdmin = user?.role === 'SUPERADMIN';
+
     // Find all projects where user is a member
     const memberships = await ProjectMember.find({ userId }).populate('projectId');
+    const memberProjectIds = memberships.map((m) => m.projectId);
 
-    const projects = await Project.find({
-      _id: { $in: memberships.map((m) => m.projectId) },
-    })
+    // Build query: projects where user is member OR projects created by SuperAdmin
+    const query: any = {};
+    if (isSuperAdmin) {
+      // SuperAdmin sees all projects they created, even if not a member
+      query.$or = [
+        { _id: { $in: memberProjectIds } },
+        { createdBy: userId }
+      ];
+    } else {
+      // Regular users only see projects where they are members
+      query._id = { $in: memberProjectIds };
+    }
+
+    const projects = await Project.find(query)
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 });
 
@@ -56,9 +72,13 @@ export class ProjectService {
           projectId: project._id,
           userId,
         });
+        
+        // If SuperAdmin created the project but is not a member, show role as null or 'CREATOR'
+        const role = membership?.role || (isSuperAdmin && project.createdBy.toString() === userId ? null : undefined);
+        
         return {
           ...project.toObject(),
-          role: membership?.role,
+          role: role,
         };
       })
     );
