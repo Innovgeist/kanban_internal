@@ -22,8 +22,9 @@ export class ColumnController {
     try {
       const items = req.body;
       const userId = req.user!._id;
+      const userRole = req.user!.role;
 
-      const result = await ColumnService.reorderColumns(items, userId);
+      const result = await ColumnService.reorderColumns(items, userId, userRole);
 
       res.status(200).json({
         success: true,

@@ -35,7 +35,7 @@ export class ColumnService {
     return column;
   }
 
-  static async reorderColumns(items: ColumnReorderItem[], userId: string) {
+  static async reorderColumns(items: ColumnReorderItem[], userId: string, userRole?: string) {
     // Validate all column IDs exist
     const columnIds = items.map((item) => item.columnId);
     const existingColumns = await Column.find({
@@ -53,14 +53,19 @@ export class ColumnService {
     const boards = await Board.find({ _id: { $in: boardIds } });
     const projectIds = [...new Set(boards.map((b) => b.projectId.toString()))];
 
-    // Check if user is a member of all projects
-    const memberships = await ProjectMember.find({
-      projectId: { $in: projectIds },
-      userId,
-    });
+    // SuperAdmin can reorder columns in any project
+    if (userRole === 'SUPERADMIN') {
+      // Skip membership check for SuperAdmin
+    } else {
+      // Check if user is a member of all projects
+      const memberships = await ProjectMember.find({
+        projectId: { $in: projectIds },
+        userId,
+      });
 
-    if (memberships.length !== projectIds.length) {
-      throw new AppError('Access denied: Not authorized to reorder these columns', 403, 'ACCESS_DENIED');
+      if (memberships.length !== projectIds.length) {
+        throw new AppError('Access denied: Not authorized to reorder these columns', 403, 'ACCESS_DENIED');
+      }
     }
 
     // Bulk update orders
