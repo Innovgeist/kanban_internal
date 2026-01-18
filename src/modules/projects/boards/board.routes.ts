@@ -1,9 +1,9 @@
 import express from 'express';
 import { BoardController } from './board.controller';
 import { authenticate } from '../../../middlewares/auth';
-import { requireProjectMember, requireBoardAccess } from '../../../middlewares/authorization';
+import { requireProjectMember, requireBoardAccess, requireBoardAdmin } from '../../../middlewares/authorization';
 import { validateRequest } from '../../../middlewares/validation';
-import { createBoardSchema } from './board.validation';
+import { createBoardSchema, updateBoardSchema } from './board.validation';
 
 const router = express.Router({ mergeParams: true });
 
@@ -23,6 +23,17 @@ const boardByIdRouter = express.Router();
 boardByIdRouter.use(authenticate);
 boardByIdRouter.use(requireBoardAccess);
 boardByIdRouter.get('/:boardId', BoardController.getById);
+boardByIdRouter.patch(
+  '/:boardId',
+  requireBoardAdmin,
+  validateRequest(updateBoardSchema),
+  BoardController.update
+);
+boardByIdRouter.delete(
+  '/:boardId',
+  requireBoardAdmin,
+  BoardController.delete
+);
 
 export { boardByIdRouter };
 export default router;

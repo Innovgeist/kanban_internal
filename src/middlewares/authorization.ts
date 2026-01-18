@@ -125,6 +125,146 @@ export const requireProjectAdmin = async (
   }
 };
 
+export const requireBoardAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // SUPERADMIN bypasses admin check
+    if (req.user?.role === 'SUPERADMIN') {
+      return next();
+    }
+
+    // Try to get boardId from params or request (set by requireBoardAccess)
+    const boardId = (req as any).boardId || req.params.boardId;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+    }
+
+    if (!boardId || !validateObjectId(boardId)) {
+      throw new AppError('Invalid board ID', 400, 'INVALID_BOARD_ID');
+    }
+
+    // Find board and get project
+    const board = await Board.findById(boardId);
+    if (!board) {
+      throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
+    }
+
+    // Check if user is a project admin
+    const member = await ProjectMember.findOne({
+      projectId: board.projectId,
+      userId,
+    });
+
+    if (!member) {
+      throw new AppError('Access denied: Not a project member', 403, 'NOT_PROJECT_MEMBER');
+    }
+
+    if (member.role !== 'ADMIN') {
+      throw new AppError('Access denied: Admin role required', 403, 'ADMIN_REQUIRED');
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const requireColumnAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // SUPERADMIN bypasses admin check
+    if (req.user?.role === 'SUPERADMIN') {
+      return next();
+    }
+
+    // Try to get columnId from params or extract from URL path
+    let columnId = (req as any).columnId || req.params.columnId;
+    
+    // If not in params, extract from URL path
+    if (!columnId) {
+      const pathStr = req.path || '';
+      const pathMatch = pathStr.match(/^\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+      if (pathMatch && pathMatch[1]) {
+        columnId = pathMatch[1];
+      } else {
+        const originalUrlStr = req.originalUrl || '';
+        const originalMatch = originalUrlStr.match(/\/(?:api\/)?columns\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+        if (originalMatch && originalMatch[1]) {
+          columnId = originalMatch[1];
+        } else {
+          const urlStr = req.url || '';
+          const urlMatch = urlStr.match(/^\/([a-fA-F0-9]{24})(?:\/|$|\?)/);
+          if (urlMatch && urlMatch[1]) {
+            columnId = urlMatch[1];
+          } else {
+            const anyMatch = pathStr.match(/([a-fA-F0-9]{24})/);
+            if (anyMatch && anyMatch[1]) {
+              columnId = anyMatch[1];
+            }
+          }
+        }
+      }
+    }
+    
+    const userId = req.user?._id;
+
+    if (!userId) {
+      throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+    }
+
+    if (!columnId) {
+      throw new AppError(`Invalid column ID. Path: ${req.path}, URL: ${req.url}`, 400, 'INVALID_COLUMN_ID');
+    }
+
+    const trimmedColumnId = columnId.trim();
+    if (!validateObjectId(trimmedColumnId)) {
+      throw new AppError(`Invalid column ID format: "${trimmedColumnId}"`, 400, 'INVALID_COLUMN_ID');
+    }
+
+    // Store in request
+    (req as any).columnId = trimmedColumnId;
+    req.params.columnId = trimmedColumnId;
+
+    // Find column and get board
+    const column = await Column.findById(trimmedColumnId);
+    if (!column) {
+      throw new AppError('Column not found', 404, 'COLUMN_NOT_FOUND');
+    }
+
+    // Find board and get project
+    const board = await Board.findById(column.boardId);
+    if (!board) {
+      throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
+    }
+
+    // Check if user is a project admin
+    const member = await ProjectMember.findOne({
+      projectId: board.projectId,
+      userId,
+    });
+
+    if (!member) {
+      throw new AppError('Access denied: Not a project member', 403, 'NOT_PROJECT_MEMBER');
+    }
+
+    if (member.role !== 'ADMIN') {
+      throw new AppError('Access denied: Admin role required', 403, 'ADMIN_REQUIRED');
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const requireBoardAccess = async (
   req: Request,
   res: Response,

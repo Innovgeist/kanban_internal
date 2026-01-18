@@ -13,3 +13,10 @@ export const moveCardSchema = z.object({
     order: z.number().int().min(0),
   }),
 });
+
+export const updateCardSchema = z.object({
+  body: z.object({
+    title: z.string().min(1, 'Card title is required').trim(),
+    description: z.string().optional(),
+  }),
+});

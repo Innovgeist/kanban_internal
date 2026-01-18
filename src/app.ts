@@ -8,8 +8,8 @@ import authRoutes from './modules/auth/auth.routes';
 import projectRoutes from './modules/projects/project.routes';
 import projectMemberRoutes from './modules/projects/projectMembers/projectMember.routes';
 import boardRoutes, { boardByIdRouter } from './modules/projects/boards/board.routes';
-import columnRoutes, { reorderRouter } from './modules/projects/boards/columns/column.routes';
-import cardRoutes, { moveRouter } from './modules/projects/boards/columns/cards/card.routes';
+import columnRoutes, { reorderRouter, columnByIdRouter } from './modules/projects/boards/columns/column.routes';
+import cardRoutes, { moveRouter, cardByIdRouter } from './modules/projects/boards/columns/cards/card.routes';
 
 const app = express();
 
@@ -55,10 +55,14 @@ app.use('/boards/:boardId/columns', columnRoutes);
 app.use('/api/boards/:boardId/columns', columnRoutes);
 app.use('/columns', reorderRouter);
 app.use('/api/columns', reorderRouter);
+app.use('/columns', columnByIdRouter);
+app.use('/api/columns', columnByIdRouter);
 app.use('/columns/:columnId/cards', cardRoutes);
 app.use('/api/columns/:columnId/cards', cardRoutes);
 app.use('/cards', moveRouter);
 app.use('/api/cards', moveRouter);
+app.use('/cards', cardByIdRouter);
+app.use('/api/cards', cardByIdRouter);
 
 // Error handling (must be last)
 app.use(errorHandler);

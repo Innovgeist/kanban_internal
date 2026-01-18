@@ -45,4 +45,35 @@ export class BoardController {
       next(error);
     }
   }
+
+  static async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { boardId } = req.params;
+      const { name } = req.body;
+
+      const board = await BoardService.updateBoard(boardId, name);
+
+      res.status(200).json({
+        success: true,
+        data: board,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { boardId } = req.params;
+
+      const result = await BoardService.deleteBoard(boardId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -34,4 +34,35 @@ export class CardController {
       next(error);
     }
   }
+
+  static async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { cardId } = req.params;
+      const { title, description } = req.body;
+
+      const card = await CardService.updateCard(cardId, title, description);
+
+      res.status(200).json({
+        success: true,
+        data: card,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { cardId } = req.params;
+
+      const result = await CardService.deleteCard(cardId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

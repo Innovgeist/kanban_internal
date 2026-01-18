@@ -33,4 +33,35 @@ export class ColumnController {
       next(error);
     }
   }
+
+  static async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { columnId } = req.params;
+      const { name } = req.body;
+
+      const column = await ColumnService.updateColumn(columnId, name);
+
+      res.status(200).json({
+        success: true,
+        data: column,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { columnId } = req.params;
+
+      const result = await ColumnService.deleteColumn(columnId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

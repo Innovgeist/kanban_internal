@@ -14,3 +14,9 @@ export const reorderColumnsSchema = z.object({
     })
   ),
 });
+
+export const updateColumnSchema = z.object({
+  body: z.object({
+    name: z.string().min(1, 'Column name is required').trim(),
+  }),
+});

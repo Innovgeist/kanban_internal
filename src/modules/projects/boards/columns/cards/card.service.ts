@@ -54,4 +54,30 @@ export class CardService {
 
     return card.populate('createdBy', 'name email');
   }
+
+  static async updateCard(cardId: string, title: string, description?: string) {
+    const card = await Card.findById(cardId);
+    if (!card) {
+      throw new AppError('Card not found', 404, 'CARD_NOT_FOUND');
+    }
+
+    card.title = title;
+    if (description !== undefined) {
+      card.description = description;
+    }
+    await card.save();
+
+    return card.populate('createdBy', 'name email');
+  }
+
+  static async deleteCard(cardId: string) {
+    const card = await Card.findById(cardId);
+    if (!card) {
+      throw new AppError('Card not found', 404, 'CARD_NOT_FOUND');
+    }
+
+    await Card.findByIdAndDelete(cardId);
+
+    return { message: 'Card deleted successfully' };
+  }
 }

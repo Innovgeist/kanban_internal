@@ -73,4 +73,31 @@ export class ColumnService {
 
     return { message: 'Columns reordered successfully' };
   }
+
+  static async updateColumn(columnId: string, name: string) {
+    const column = await Column.findById(columnId);
+    if (!column) {
+      throw new AppError('Column not found', 404, 'COLUMN_NOT_FOUND');
+    }
+
+    column.name = name;
+    await column.save();
+
+    return column;
+  }
+
+  static async deleteColumn(columnId: string) {
+    const column = await Column.findById(columnId);
+    if (!column) {
+      throw new AppError('Column not found', 404, 'COLUMN_NOT_FOUND');
+    }
+
+    // Delete all cards in this column
+    await Card.deleteMany({ columnId });
+
+    // Delete the column
+    await Column.findByIdAndDelete(columnId);
+
+    return { message: 'Column deleted successfully' };
+  }
 }

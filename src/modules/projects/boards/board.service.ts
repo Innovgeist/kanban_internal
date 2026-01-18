@@ -60,4 +60,38 @@ export class BoardService {
       columns: columnsWithCards,
     };
   }
+
+  static async updateBoard(boardId: string, name: string) {
+    const board = await Board.findById(boardId);
+    if (!board) {
+      throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
+    }
+
+    board.name = name;
+    await board.save();
+
+    return board;
+  }
+
+  static async deleteBoard(boardId: string) {
+    const board = await Board.findById(boardId);
+    if (!board) {
+      throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
+    }
+
+    // Delete all columns and cards in this board
+    const columns = await Column.find({ boardId });
+    const columnIds = columns.map((col) => col._id);
+    
+    // Delete all cards in these columns
+    await Card.deleteMany({ columnId: { $in: columnIds } });
+    
+    // Delete all columns
+    await Column.deleteMany({ boardId });
+    
+    // Delete the board
+    await Board.findByIdAndDelete(boardId);
+
+    return { message: 'Board deleted successfully' };
+  }
 }
