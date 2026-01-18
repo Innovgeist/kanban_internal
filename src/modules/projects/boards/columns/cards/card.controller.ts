@@ -5,10 +5,24 @@ export class CardController {
   static async create(req: Request, res: Response, next: NextFunction) {
     try {
       const { columnId } = req.params;
-      const { title, description } = req.body;
+      const { title, description, priority, expectedDeliveryDate, assignedTo } = req.body;
       const userId = req.user!._id;
 
-      const card = await CardService.createCard(columnId, title, description, userId);
+      // Convert priority to uppercase if provided
+      const normalizedPriority = priority ? (priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT') : undefined;
+      
+      // Parse date if provided
+      const parsedDate = expectedDeliveryDate ? new Date(expectedDeliveryDate) : undefined;
+
+      const card = await CardService.createCard(
+        columnId,
+        title,
+        description,
+        userId,
+        normalizedPriority,
+        parsedDate,
+        assignedTo
+      );
 
       res.status(201).json({
         success: true,
@@ -39,13 +53,26 @@ export class CardController {
     try {
       // Get cardId from params (set by requireCardAccess middleware) or extract from path
       const cardId = (req as any).cardId || req.params.cardId;
-      const { title, description } = req.body;
+      const { title, description, priority, expectedDeliveryDate, assignedTo } = req.body;
 
       if (!cardId) {
         throw new Error('Card ID is required');
       }
 
-      const card = await CardService.updateCard(cardId, title, description);
+      // Convert priority to uppercase if provided, or null if explicitly set to null
+      const normalizedPriority = priority === null ? null : (priority ? priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' : undefined);
+      
+      // Parse date if provided, or null if explicitly set to null
+      const parsedDate = expectedDeliveryDate === null ? null : (expectedDeliveryDate ? new Date(expectedDeliveryDate) : undefined);
+
+      const card = await CardService.updateCard(
+        cardId,
+        title,
+        description,
+        normalizedPriority,
+        parsedDate,
+        assignedTo
+      );
 
       res.status(200).json({
         success: true,

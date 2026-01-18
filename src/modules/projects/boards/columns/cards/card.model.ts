@@ -1,9 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export type CardPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+
 export interface ICard extends Document {
   columnId: mongoose.Types.ObjectId;
   title: string;
   description?: string;
+  priority?: CardPriority;
+  expectedDeliveryDate?: Date;
+  assignedTo: mongoose.Types.ObjectId[]; // Array of user IDs
   order: number;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -24,6 +29,19 @@ const cardSchema = new Schema<ICard>(
     description: {
       type: String,
       trim: true,
+    },
+    priority: {
+      type: String,
+      enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'],
+      default: 'MEDIUM',
+    },
+    expectedDeliveryDate: {
+      type: Date,
+    },
+    assignedTo: {
+      type: [Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
     },
     order: {
       type: Number,

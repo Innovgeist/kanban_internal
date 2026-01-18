@@ -36,6 +36,7 @@ export class BoardService {
     const columnIds = columns.map((col) => col._id);
     const cards = await Card.find({ columnId: { $in: columnIds } })
       .populate('createdBy', 'name email')
+      .populate('assignedTo', 'name email')
       .sort({ order: 1 })
       .lean();
 

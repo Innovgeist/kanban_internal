@@ -10,7 +10,7 @@ export interface ColumnReorderItem {
 }
 
 export class ColumnService {
-  static async createColumn(boardId: string, name: string) {
+  static async createColumn(boardId: string, name: string, color?: string) {
     // Verify board exists
     const board = await Board.findById(boardId);
     if (!board) {
@@ -28,6 +28,7 @@ export class ColumnService {
     const column = await Column.create({
       boardId,
       name,
+      color: color || '#94a3b8', // Default color if not provided
       order,
     });
 
@@ -75,13 +76,16 @@ export class ColumnService {
     return { message: 'Columns reordered successfully' };
   }
 
-  static async updateColumn(columnId: string, name: string) {
+  static async updateColumn(columnId: string, name: string, color?: string) {
     const column = await Column.findById(columnId);
     if (!column) {
       throw new AppError('Column not found', 404, 'COLUMN_NOT_FOUND');
     }
 
     column.name = name;
+    if (color !== undefined) {
+      column.color = color || '#94a3b8';
+    }
     await column.save();
 
     return column;

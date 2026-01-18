@@ -5,9 +5,9 @@ export class ColumnController {
   static async create(req: Request, res: Response, next: NextFunction) {
     try {
       const { boardId } = req.params;
-      const { name } = req.body;
+      const { name, color } = req.body;
 
-      const column = await ColumnService.createColumn(boardId, name);
+      const column = await ColumnService.createColumn(boardId, name, color);
 
       res.status(201).json({
         success: true,
@@ -38,13 +38,13 @@ export class ColumnController {
     try {
       // Get columnId from params (set by requireColumnAdmin middleware) or extract from path
       const columnId = (req as any).columnId || req.params.columnId;
-      const { name } = req.body;
+      const { name, color } = req.body;
 
       if (!columnId) {
         throw new Error('Column ID is required');
       }
 
-      const column = await ColumnService.updateColumn(columnId, name);
+      const column = await ColumnService.updateColumn(columnId, name, color);
 
       res.status(200).json({
         success: true,
