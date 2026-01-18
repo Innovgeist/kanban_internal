@@ -47,12 +47,12 @@ app.use('/projects/:projectId/members', projectMemberRoutes);
 app.use('/api/projects/:projectId/members', projectMemberRoutes);
 app.use('/projects/:projectId/boards', boardRoutes);
 app.use('/api/projects/:projectId/boards', boardRoutes);
-// More specific routes first (with /columns)
-app.use('/boards/:boardId/columns', columnRoutes);
-app.use('/api/boards/:boardId/columns', columnRoutes);
-// General board routes (less specific)
+// General board routes first (must come before /columns routes)
 app.use('/boards', boardByIdRouter);
 app.use('/api/boards', boardByIdRouter);
+// More specific routes (with /columns) - must come after general board routes
+app.use('/boards/:boardId/columns', columnRoutes);
+app.use('/api/boards/:boardId/columns', columnRoutes);
 app.use('/columns', reorderRouter);
 app.use('/api/columns', reorderRouter);
 app.use('/columns/:columnId/cards', cardRoutes);

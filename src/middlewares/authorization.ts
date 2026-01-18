@@ -132,7 +132,24 @@ export const requireBoardAccess = async (
 ) => {
   try {
     // Try to get boardId from params (could be boardId or id)
-    const boardId = req.params.boardId || req.params.id;
+    // Also check the URL path directly if params aren't available yet
+    let boardId = req.params.boardId || req.params.id;
+    
+    // If not in params, extract from URL path
+    if (!boardId) {
+      // Match /boards/{boardId} or /api/boards/{boardId}
+      const pathMatch = req.path.match(/\/(?:api\/)?boards\/([a-fA-F0-9]{24})(?:\/|$)/);
+      if (pathMatch) {
+        boardId = pathMatch[1];
+      } else {
+        // Fallback to full URL match
+        const urlMatch = req.url.match(/\/(?:api\/)?boards\/([a-fA-F0-9]{24})(?:\/|$)/);
+        if (urlMatch) {
+          boardId = urlMatch[1];
+        }
+      }
+    }
+    
     const userId = req.user?._id;
     const userRole = req.user?.role;
 
@@ -141,7 +158,9 @@ export const requireBoardAccess = async (
     }
 
     if (!boardId) {
-      throw new AppError('Board ID is required', 400, 'BOARD_ID_REQUIRED');
+      // Debug info
+      console.log('Board ID not found. Path:', req.path, 'URL:', req.url, 'Params:', req.params);
+      throw new AppError(`Board ID is required. Path: ${req.path}, URL: ${req.url}, Params: ${JSON.stringify(req.params)}`, 400, 'BOARD_ID_REQUIRED');
     }
 
     // Trim whitespace and validate
