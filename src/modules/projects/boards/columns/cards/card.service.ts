@@ -4,6 +4,7 @@ import { Board } from '../../board.model';
 import { ProjectMember } from '../../../projectMembers/projectMember.model';
 import { AppError } from '../../../../../utils/errors';
 import { validateObjectId } from '../../../../../utils/validation';
+import { Types } from 'mongoose';
 
 export class CardService {
   static async createCard(
@@ -70,7 +71,7 @@ export class CardService {
       description,
       priority: priority || 'MEDIUM',
       expectedDeliveryDate: expectedDeliveryDate || undefined,
-      assignedTo: assignedToIds,
+      assignedTo: assignedToIds.map(id => new Types.ObjectId(id)),
       order,
       createdBy,
     });
@@ -166,7 +167,7 @@ export class CardService {
           );
         }
 
-        card.assignedTo = assignedTo;
+        card.assignedTo = assignedTo.map(id => new Types.ObjectId(id)) as any;
       } else {
         // Empty array - remove all assignments
         card.assignedTo = [];
