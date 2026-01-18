@@ -23,15 +23,25 @@ export class ProjectMemberService {
       // Extract name from email (before @)
       const nameFromEmail = email.split('@')[0];
 
-      user = await User.create({
-        name: nameFromEmail,
-        email: email.toLowerCase(),
-        authProvider: 'email',
-        role: 'USER',
-        invitationToken,
-        invitationTokenExpires,
-        // No passwordHash - user must set password via invitation
-      });
+      try {
+        user = await User.create({
+          name: nameFromEmail,
+          email: email.toLowerCase(),
+          authProvider: 'email',
+          role: 'USER',
+          invitationToken,
+          invitationTokenExpires,
+          passwordHash: undefined, // Explicitly set to undefined - will be set via invitation
+        });
+      } catch (error: any) {
+        // Log the actual error for debugging
+        console.error('Error creating user with invitation:', error);
+        throw new AppError(
+          `Failed to create user: ${error.message || 'Unknown error'}`,
+          500,
+          'USER_CREATION_ERROR'
+        );
+      }
     }
 
     // Check if project exists

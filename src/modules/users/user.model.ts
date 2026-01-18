@@ -32,8 +32,9 @@ const userSchema = new Schema<IUser>(
     passwordHash: {
       type: String,
       required: function(this: IUser) {
-        // Required only for email-based authentication
-        return this.authProvider === 'email';
+        // Required only for email-based authentication, but not if user has invitation token
+        // Users with invitation tokens will set password later
+        return this.authProvider === 'email' && !this.invitationToken;
       },
     },
     googleId: {

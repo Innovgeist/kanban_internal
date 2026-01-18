@@ -131,11 +131,20 @@ export class GoogleAuthService {
           user.name = googleUserInfo.name;
           await user.save();
         }
+        // Clear invitation token if present (user has authenticated)
+        if (user.invitationToken) {
+          user.invitationToken = undefined;
+          user.invitationTokenExpires = undefined;
+          await user.save();
+        }
       } else if (user.authProvider === 'email') {
         // Link Google to existing email account
         user.googleId = googleUserInfo.id;
         user.authProvider = 'google'; // Switch to Google auth
-        // Keep passwordHash in case they want to switch back
+        // Clear invitation token since user has authenticated with Google
+        user.invitationToken = undefined;
+        user.invitationTokenExpires = undefined;
+        // Keep passwordHash in case they want to switch back to email auth
         await user.save();
       } else {
         // Different Google account with same email (shouldn't happen, but handle it)
@@ -149,6 +158,7 @@ export class GoogleAuthService {
         googleId: googleUserInfo.id,
         authProvider: 'google',
         role: 'USER',
+        // No invitation token needed - user is creating account via Google
       });
     }
 
