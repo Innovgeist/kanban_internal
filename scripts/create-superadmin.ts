@@ -9,7 +9,7 @@ async function createSuperAdmin() {
     await mongoose.connect(config.mongodbUri);
     console.log('✅ Connected to MongoDB successfully!');
 
-    const email = 'innovgeist@gmail.com';
+    const email = 'ranadee850@gmail.com';
     const defaultPassword = 'SuperAdmin@123'; // Default password for testing
     
     // Check if user already exists

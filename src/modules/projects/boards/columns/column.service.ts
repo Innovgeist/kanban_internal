@@ -81,16 +81,28 @@ export class ColumnService {
     return { message: 'Columns reordered successfully' };
   }
 
-  static async updateColumn(columnId: string, name: string, color?: string) {
+  static async updateColumn(columnId: string, payload: { name: string; color?: string ,
+    autoCleanupMode?: 'HIDE' | 'DELETE' | null;
+    autoCleanupAfterDays?: number | null;
+   }) {
     const column = await Column.findById(columnId);
     if (!column) {
       throw new AppError('Column not found', 404, 'COLUMN_NOT_FOUND');
     }
-
-    column.name = name;
-    if (color !== undefined) {
-      column.color = color || '#94a3b8';
+    if (payload.name!== undefined) {
+      column.name = payload.name;
     }
+
+    if (payload.color !== undefined) {
+      column.color = payload.color || '#94a3b8';
+    }
+    if (payload.autoCleanupMode !== undefined) {
+    column.autoCleanupMode = payload.autoCleanupMode || undefined;
+  }
+
+  if (payload.autoCleanupAfterDays !== undefined) {
+    column.autoCleanupAfterDays = payload.autoCleanupAfterDays || undefined;
+  }
     await column.save();
 
     return column;
@@ -110,4 +122,5 @@ export class ColumnService {
 
     return { message: 'Column deleted successfully' };
   }
+  
 }

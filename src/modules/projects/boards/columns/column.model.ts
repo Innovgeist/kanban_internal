@@ -5,6 +5,8 @@ export interface IColumn extends Document {
   name: string;
   color?: string; // Hex color code (e.g., "#3b82f6")
   order: number;
+   autoCleanupMode?: 'HIDE' | 'DELETE';
+  autoCleanupAfterDays?: number;
 }
 
 const columnSchema = new Schema<IColumn>(
@@ -36,10 +38,23 @@ const columnSchema = new Schema<IColumn>(
       required: true,
       default: 0,
     },
+    autoCleanupMode: {
+      type: String,
+      enum: ['HIDE', 'DELETE'],
+      default: undefined,
+    },
+    autoCleanupAfterDays: {
+      type: Number,
+  
+      max: 365,
+      
+    },
   },
+  
   {
     timestamps: false,
   }
 );
+
 
 export const Column = mongoose.model<IColumn>('Column', columnSchema);
