@@ -39,13 +39,12 @@ export class ColumnController {
     try {
       // Get columnId from params (set by requireColumnAdmin middleware) or extract from path
       const columnId = (req as any).columnId || req.params.columnId;
-      const { name, color } = req.body;
 
       if (!columnId) {
         throw new Error('Column ID is required');
       }
 
-      const column = await ColumnService.updateColumn(columnId, name, color);
+      const column = await ColumnService.updateColumn(columnId, req.body  );
 
       res.status(200).json({
         success: true,
