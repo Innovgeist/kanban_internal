@@ -23,6 +23,7 @@ columnByIdRouter.use(authenticate);
 columnByIdRouter.use(requireColumnAdmin);
 columnByIdRouter.patch(
   '/:columnId',
+  requireColumnAdmin,
   validateRequest(updateColumnSchema),
   ColumnController.update
 );

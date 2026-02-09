@@ -5,6 +5,7 @@ import { ProjectMember } from '../../../projectMembers/projectMember.model';
 import { AppError } from '../../../../../utils/errors';
 import { validateObjectId } from '../../../../../utils/validation';
 import { Types } from 'mongoose';
+import { autoCleanupCards } from './autoCleanupCards';
 
 export class CardService {
   static async createCard(
@@ -94,11 +95,28 @@ export class CardService {
     if (!column) {
       throw new AppError('Column not found', 404, 'COLUMN_NOT_FOUND');
     }
-
+    
+  const oldColumnId = card.columnId?.toString();
+  const newColumnId = column._id.toString();
     // Update card
     card.columnId = columnId as any;
     card.order = order;
+    
+    if (column.autoCleanupMode && column.autoCleanupAfterDays) {
+    if (oldColumnId !== newColumnId) {
+      card.compleatedAt = new Date();
+      card.isHidden = false; 
+    }
+  } else {
+    if (oldColumnId !== newColumnId) {
+      card.compleatedAt = null;
+      card.isHidden = false;
+    }
+  }
+
+
     await card.save();
+    await autoCleanupCards(newColumnId)
 
     return card.populate([
       { path: 'createdBy', select: 'name email' },

@@ -1,8 +1,9 @@
-import { Column } from './column.model';
-import { Board } from '../board.model';
-import { Card } from './cards/card.model';
-import { ProjectMember } from '../../projectMembers/projectMember.model';
-import { AppError } from '../../../../utils/errors';
+import { Column } from "./column.model";
+import { Board } from "../board.model";
+import { Card } from "./cards/card.model";
+import { ProjectMember } from "../../projectMembers/projectMember.model";
+import { AppError } from "../../../../utils/errors";
+import { autoCleanupCards } from "./cards/autoCleanupCards";
 
 export interface ColumnReorderItem {
   columnId: string;
@@ -14,13 +15,13 @@ export class ColumnService {
     // Verify board exists
     const board = await Board.findById(boardId);
     if (!board) {
-      throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
+      throw new AppError("Board not found", 404, "BOARD_NOT_FOUND");
     }
 
     // Get max order value
     const maxOrderColumn = await Column.findOne({ boardId })
       .sort({ order: -1 })
-      .select('order')
+      .select("order")
       .lean();
 
     const order = maxOrderColumn ? maxOrderColumn.order + 1 : 0;
@@ -28,14 +29,18 @@ export class ColumnService {
     const column = await Column.create({
       boardId,
       name,
-      color: color || '#94a3b8', // Default color if not provided
+      color: color || "#94a3b8", // Default color if not provided
       order,
     });
 
     return column;
   }
 
-  static async reorderColumns(items: ColumnReorderItem[], userId: string, userRole?: string) {
+  static async reorderColumns(
+    items: ColumnReorderItem[],
+    userId: string,
+    userRole?: string,
+  ) {
     // Validate all column IDs exist
     const columnIds = items.map((item) => item.columnId);
     const existingColumns = await Column.find({
@@ -43,18 +48,24 @@ export class ColumnService {
     });
 
     if (existingColumns.length !== columnIds.length) {
-      throw new AppError('One or more columns not found', 404, 'COLUMN_NOT_FOUND');
+      throw new AppError(
+        "One or more columns not found",
+        404,
+        "COLUMN_NOT_FOUND",
+      );
     }
 
     // Get unique board IDs from columns
-    const boardIds = [...new Set(existingColumns.map((col) => col.boardId.toString()))];
+    const boardIds = [
+      ...new Set(existingColumns.map((col) => col.boardId.toString())),
+    ];
 
     // Verify user has access to all boards
     const boards = await Board.find({ _id: { $in: boardIds } });
     const projectIds = [...new Set(boards.map((b) => b.projectId.toString()))];
 
     // SuperAdmin can reorder columns in any project
-    if (userRole === 'SUPERADMIN') {
+    if (userRole === "SUPERADMIN") {
       // Skip membership check for SuperAdmin
     } else {
       // Check if user is a member of all projects
@@ -64,7 +75,11 @@ export class ColumnService {
       });
 
       if (memberships.length !== projectIds.length) {
-        throw new AppError('Access denied: Not authorized to reorder these columns', 403, 'ACCESS_DENIED');
+        throw new AppError(
+          "Access denied: Not authorized to reorder these columns",
+          403,
+          "ACCESS_DENIED",
+        );
       }
     }
 
@@ -78,31 +93,53 @@ export class ColumnService {
 
     await Column.bulkWrite(bulkOps);
 
-    return { message: 'Columns reordered successfully' };
+    return { message: "Columns reordered successfully" };
   }
 
-  static async updateColumn(columnId: string, payload: { name: string; color?: string ,
-    autoCleanupMode?: 'HIDE' | 'DELETE' | null;
-    autoCleanupAfterDays?: number | null;
-   }) {
+  static async updateColumn(
+    columnId: string,
+    payload: { name: string; color?: string; runCleanupNow?: boolean },
+  ) {
     const column = await Column.findById(columnId);
+    const cards = await Card.find({ columnId: columnId });
+
     if (!column) {
-      throw new AppError('Column not found', 404, 'COLUMN_NOT_FOUND');
+      throw new AppError("Column not found", 404, "COLUMN_NOT_FOUND");
     }
-    if (payload.name!== undefined) {
+    if (payload.name !== undefined) {
       column.name = payload.name;
     }
 
     if (payload.color !== undefined) {
-      column.color = payload.color || '#94a3b8';
+      column.color = payload.color || "#94a3b8";
     }
-    if (payload.autoCleanupMode !== undefined) {
-    column.autoCleanupMode = payload.autoCleanupMode || undefined;
-  }
+    if (payload.runCleanupNow) {
+      const DAYS = 14;
+      const cutoff = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000);
+      const query: any = {
+        columnId: column._id,
+        isHidden: { $ne: true },
+        $or: [
+          { movedToColumnAt: { $lte: cutoff } }, // best
+          { movedToColumnAt: null, createdAt: { $lte: cutoff } }, // fallback
+          { createdAt: { $lte: cutoff } }, // if movedToColumnAt doesn't exist at all
+        ],
+      };
 
-  if (payload.autoCleanupAfterDays !== undefined) {
-    column.autoCleanupAfterDays = payload.autoCleanupAfterDays || undefined;
-  }
+      const res = await Card.updateMany(query, { $set: { isHidden: true } });
+      return {
+        column,
+        cleanup: {
+          days: DAYS,
+          hiddenCards: res.modifiedCount ?? 0,
+          message:
+            res.matchedCount === 0
+              ? "No cards eligible for cleanup"
+              : "Cleanup completed",
+        },
+      };
+    }
+
     await column.save();
 
     return column;
@@ -111,7 +148,7 @@ export class ColumnService {
   static async deleteColumn(columnId: string) {
     const column = await Column.findById(columnId);
     if (!column) {
-      throw new AppError('Column not found', 404, 'COLUMN_NOT_FOUND');
+      throw new AppError("Column not found", 404, "COLUMN_NOT_FOUND");
     }
 
     // Delete all cards in this column
@@ -120,7 +157,6 @@ export class ColumnService {
     // Delete the column
     await Column.findByIdAndDelete(columnId);
 
-    return { message: 'Column deleted successfully' };
+    return { message: "Column deleted successfully" };
   }
-  
 }

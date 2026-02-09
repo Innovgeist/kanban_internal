@@ -12,6 +12,9 @@ export interface ICard extends Document {
   order: number;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
+  isHidden: boolean;
+  moveToColumnAt?: Date | null;
+  deletedAt?: Date | null;
 }
 
 const cardSchema = new Schema<ICard>(
@@ -57,6 +60,19 @@ const cardSchema = new Schema<ICard>(
       type: Date,
       default: Date.now,
     },
+    isHidden: {
+      type: Boolean,
+      default: false,
+    },
+    moveToColumnAt: {
+      type: Date,
+      default: null,  
+  },
+    deletedAt: {
+      type: Date,
+      default: null,  
+    },
+    
   },
   {
     timestamps: false,
