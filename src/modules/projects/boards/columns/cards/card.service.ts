@@ -15,6 +15,7 @@ export class CardService {
     createdBy: string,
     priority?: CardPriority,
     expectedDeliveryDate?: Date | null,
+    compleatedAt?: Date | null,
     assignedTo?: string[]
   ) {
     // Verify column exists
