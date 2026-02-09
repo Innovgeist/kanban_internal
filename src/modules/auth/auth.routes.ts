@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { AuthController } from './auth.controller';
 import { validateRequest } from '../../middlewares/validation';
 import { registerSchema, loginSchema, refreshSchema } from './auth.validation';
+import { authenticate } from '../../middlewares/auth';
 
 const router = express.Router();
 
@@ -42,5 +43,7 @@ router.get('/google/callback', AuthController.googleCallback);
 // Invitation routes
 router.post('/invitation/set-password', AuthController.setPasswordFromInvitation);
 router.get('/invitation/details', AuthController.getInvitationDetails);
+router.get('/me',authenticate, AuthController.me);
+
 
 export default router;

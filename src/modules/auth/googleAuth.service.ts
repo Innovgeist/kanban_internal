@@ -119,7 +119,7 @@ export class GoogleAuthService {
 
     // Step 2: Get user info from Google
     const googleUserInfo = await this.getUserInfo(accessToken);
-
+    
     // Step 3: Check if user exists by email
     let user = await User.findOne({ email: googleUserInfo.email });
 
@@ -127,14 +127,22 @@ export class GoogleAuthService {
       // User exists - link Google account
       if (user.authProvider === 'google' && user.googleId === googleUserInfo.id) {
         // Already linked, just update if needed
+        let changed = false;
         if (user.name !== googleUserInfo.name) {
           user.name = googleUserInfo.name;
-          await user.save();
+          changed = true;
         }
+        if (googleUserInfo.picture && user.avatarUrl !== googleUserInfo.picture) {
+        user.avatarUrl = googleUserInfo.picture;
+        changed = true;
+      }
         // Clear invitation token if present (user has authenticated)
         if (user.invitationToken) {
           user.invitationToken = undefined;
           user.invitationTokenExpires = undefined;
+          changed = true;
+        }
+        if(changed) {
           await user.save();
         }
       } else if (user.authProvider === 'email') {
@@ -142,6 +150,8 @@ export class GoogleAuthService {
         user.googleId = googleUserInfo.id;
         user.authProvider = 'google'; // Switch to Google auth
         // Clear invitation token since user has authenticated with Google
+        user.name = googleUserInfo.name; // Update name from Google
+        if(googleUserInfo.picture) user.avatarUrl = googleUserInfo.picture;
         user.invitationToken = undefined;
         user.invitationTokenExpires = undefined;
         // Keep passwordHash in case they want to switch back to email auth
@@ -158,6 +168,7 @@ export class GoogleAuthService {
         googleId: googleUserInfo.id,
         authProvider: 'google',
         role: 'USER',
+        avatarUrl: googleUserInfo.picture || null,  
         // No invitation token needed - user is creating account via Google
       });
     }
@@ -176,6 +187,7 @@ export class GoogleAuthService {
         email: user.email,
         role: user.role,
         authProvider: user.authProvider,
+        avatarUrl: user.avatarUrl,
         createdAt: user.createdAt,
       },
       tokens,
