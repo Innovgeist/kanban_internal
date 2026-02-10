@@ -3,6 +3,11 @@ import { AuthService } from './auth.service';
 import { GoogleAuthService } from './googleAuth.service';
 import { InvitationService } from './invitation.service';
 import { AppError } from '../../utils/errors';
+import { JsonWebTokenError } from 'jsonwebtoken';
+import { config } from '../../config/env';
+import jwt from 'jsonwebtoken';
+import { User } from '../users/user.model';
+
 
 export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
@@ -105,6 +110,9 @@ export class AuthController {
       // Encode tokens for URL (they contain special characters)
       const accessToken = encodeURIComponent(result.tokens.accessToken);
       const refreshToken = encodeURIComponent(result.tokens.refreshToken);
+      const avatarUrl = encodeURIComponent(result.user.avatarUrl || '');
+      const name = encodeURIComponent(result.user.name);
+      const email = encodeURIComponent(result.user.email);
       
       const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}`;
 
@@ -163,4 +171,29 @@ export class AuthController {
       next(error);
     }
   }
+ 
+  static async me(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
+    }
+
+    const user = await User.findById(userId).select(
+      "_id name email role authProvider avatarUrl createdAt"
+    );
+
+    if (!user) {
+      throw new AppError("User not found", 404, "USER_NOT_FOUND");
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { user },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 }

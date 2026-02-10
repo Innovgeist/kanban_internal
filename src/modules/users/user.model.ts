@@ -10,6 +10,7 @@ export interface IUser extends Document {
   googleId?: string; // Google user ID
   authProvider: AuthProvider; // 'email' or 'google'
   role: UserRole;
+  avatarUrl?: string; // Optional URL for user avatar
   invitationToken?: string; // Token for setting initial password
   invitationTokenExpires?: Date; // Expiration for invitation token
   createdAt: Date;
@@ -41,6 +42,10 @@ const userSchema = new Schema<IUser>(
       type: String,
       unique: true,
       sparse: true, // Allows multiple null values
+    },
+    avatarUrl: {
+      type: String,
+      default: null,
     },
     authProvider: {
       type: String,
