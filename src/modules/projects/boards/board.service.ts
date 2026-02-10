@@ -95,4 +95,5 @@ export class BoardService {
 
     return { message: 'Board deleted successfully' };
   }
+  
 }
