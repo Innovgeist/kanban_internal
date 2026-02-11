@@ -97,53 +97,116 @@ export class ColumnService {
   }
 
   static async updateColumn(
-    columnId: string,
-    payload: { name: string; color?: string; runCleanupNow?: boolean },
-  ) {
-    const column = await Column.findById(columnId);
-    const cards = await Card.find({ columnId: columnId });
+  columnId: string,
+  payload: {
+    name?: string;
+    color?: string;
+    autoCleanupMode?: "HIDE" | "DELETE" | null;
+    autoCleanupAfterDays?: number | null;
+    runCleanupNow?: boolean;
+  },
+) {
+  const column = await Column.findById(columnId);
+  if (!column) {
+    throw new AppError("Column not found", 404, "COLUMN_NOT_FOUND");
+  }
 
-    if (!column) {
-      throw new AppError("Column not found", 404, "COLUMN_NOT_FOUND");
-    }
-    if (payload.name !== undefined) {
-      column.name = payload.name;
-    }
+  // ✅ update column basic fields
+  if (payload.name !== undefined) column.name = payload.name;
+  if (payload.color !== undefined) column.color = payload.color || "#94a3b8";
 
-    if (payload.color !== undefined) {
-      column.color = payload.color || "#94a3b8";
-    }
-    if (payload.runCleanupNow) {
-      const DAYS = 14;
-      const cutoff = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000);
-      const query: any = {
-        columnId: column._id,
-        isHidden: { $ne: true },
-        $or: [
-          { movedToColumnAt: { $lte: cutoff } }, // best
-          { movedToColumnAt: null, createdAt: { $lte: cutoff } }, // fallback
-          { createdAt: { $lte: cutoff } }, // if movedToColumnAt doesn't exist at all
-        ],
-      };
+  // ✅ store cleanup settings on the column
+  if (payload.autoCleanupMode !== undefined) {
+    column.autoCleanupMode = payload.autoCleanupMode;
+  }
+  if (payload.autoCleanupAfterDays !== undefined) {
+    column.autoCleanupAfterDays = payload.autoCleanupAfterDays;
+  }
 
-      const res = await Card.updateMany(query, { $set: { isHidden: true } });
+  // ✅ save first (important)
+  await column.save();
+
+  // ✅ run cleanup now (affects cards in THIS column)
+  if (payload.runCleanupNow) {
+    const mode = column.autoCleanupMode; // use saved value
+    const days = column.autoCleanupAfterDays ?? 14;
+
+    if (!mode) {
       return {
         column,
         cleanup: {
-          days: DAYS,
-          hiddenCards: res.modifiedCount ?? 0,
-          message:
-            res.matchedCount === 0
-              ? "No cards eligible for cleanup"
-              : "Cleanup completed",
+          days,
+          matchedCards: 0,
+          affectedCards: 0,
+          message: "Cleanup mode not set for this column",
         },
       };
     }
 
-    await column.save();
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    return column;
+    const query: any = {
+      columnId: column._id,
+      isHidden: { $ne: true },
+      deletedAt: null,
+      $or: [
+        { movedToColumnAt: { $lte: cutoff } }, // best
+        { movedToColumnAt: null, createdAt: { $lte: cutoff } }, // fallback
+        { createdAt: { $lte: cutoff } }, // extra fallback
+      ],
+    };
+
+    const matchedCards = await Card.countDocuments(query);
+
+    if (matchedCards === 0) {
+      return {
+        column,
+        cleanup: {
+          days,
+          mode,
+          matchedCards: 0,
+          affectedCards: 0,
+          message: "No cards eligible for cleanup",
+        },
+      };
+    }
+
+    // ✅ HIDE
+    if (mode === "HIDE") {
+      const res = await Card.updateMany(query, { $set: { isHidden: true } });
+
+      return {
+        column,
+        cleanup: {
+          days,
+          mode,
+          matchedCards,
+          affectedCards: res.modifiedCount ?? 0,
+          message: "Cards hidden successfully",
+        },
+      };
+    }
+
+    // ✅ DELETE (soft delete)
+    const res = await Card.updateMany(query, {
+      $set: { deletedAt: new Date(), isHidden: true },
+    });
+
+    return {
+      column,
+      cleanup: {
+        days,
+        mode,
+        matchedCards,
+        affectedCards: res.modifiedCount ?? 0,
+        message: "Cards deleted successfully",
+      },
+    };
   }
+
+  return column;
+}
+
 
   static async deleteColumn(columnId: string) {
     const column = await Column.findById(columnId);
