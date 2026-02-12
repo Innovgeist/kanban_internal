@@ -79,8 +79,8 @@ export class CardService {
     });
 
     return card.populate([
-      { path: 'createdBy', select: 'name email' },
-      { path: 'assignedTo', select: 'name email' },
+      { path: 'createdBy', select: 'name email avatarUrl' },
+      { path: 'assignedTo', select: 'name email avatarUrl' },
     ]);
   }
 

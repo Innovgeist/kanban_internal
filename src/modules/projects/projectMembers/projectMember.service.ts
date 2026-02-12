@@ -99,7 +99,7 @@ export class ProjectMemberService {
 
   static async getProjectMembers(projectId: string) {
     const members = await ProjectMember.find({ projectId })
-      .populate('userId', 'name email')
+      .populate('userId', 'name email avatarUrl')
       .sort({ role: 1, createdAt: 1 });
 
     return members;
