@@ -1,6 +1,6 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document } from "mongoose";
 
-export type CardPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+export type CardPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
 export interface ICard extends Document {
   columnId: mongoose.Types.ObjectId;
@@ -13,8 +13,10 @@ export interface ICard extends Document {
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   isHidden: boolean;
+  autoCleanupMode?: "HIDE" | "DELETE" | null;
+  movedToColumnAt?: Date | null;
+
   compleatedAt?: Date | null;
-  moveToColumnAt?: Date | null;
   deletedAt?: Date | null;
 }
 
@@ -65,24 +67,29 @@ const cardSchema = new Schema<ICard>(
       type: Boolean,
       default: false,
     },
-    moveToColumnAt: {
+    movedToColumnAt: { 
       type: Date,
-      default: null,  
-  },
+       default: null
+    },
+
     deletedAt: {
       type: Date,
-      default: null,  
+      default: null,
     },
-      compleatedAt: {   
+    compleatedAt: {
       type: Date,
-      default: null,  
+      default: null,
     },
-    
+    autoCleanupMode: {
+      type: String,
+      enum: ['HIDE', 'DELETE'],
+      default: undefined,
+    },
   },
-  
+
   {
     timestamps: false,
-  }
+  },
 );
 
-export const Card = mongoose.model<ICard>('Card', cardSchema);
+export const Card = mongoose.model<ICard>("Card", cardSchema);

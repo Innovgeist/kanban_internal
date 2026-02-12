@@ -1,19 +1,22 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document } from "mongoose";
+export type AutoCleanupMode = "HIDE" | "DELETE";
 
 export interface IColumn extends Document {
   boardId: mongoose.Types.ObjectId;
   name: string;
   color?: string; // Hex color code (e.g., "#3b82f6")
   order: number;
-   autoCleanupMode?: 'HIDE' | 'DELETE';
-  autoCleanupAfterDays?: number;
+
+  // ✅ NEW (column rule for all cards)
+  autoCleanupMode?: AutoCleanupMode | null;
+  autoCleanupAfterDays?: number | null;
 }
 
 const columnSchema = new Schema<IColumn>(
   {
     boardId: {
       type: Schema.Types.ObjectId,
-      ref: 'Board',
+      ref: "Board",
       required: true,
     },
     name: {
@@ -24,13 +27,13 @@ const columnSchema = new Schema<IColumn>(
     color: {
       type: String,
       trim: true,
-      default: '#94a3b8', // Default gray color
+      default: "#94a3b8", // Default gray color
       validate: {
-        validator: function(v: string | undefined) {
+        validator: function (v: string | undefined) {
           if (!v) return true; // Allow null/undefined
           return /^#[0-9A-Fa-f]{6}$/.test(v);
         },
-        message: 'Color must be a valid hex color code (e.g., #3b82f6)',
+        message: "Color must be a valid hex color code (e.g., #3b82f6)",
       },
     },
     order: {
@@ -40,21 +43,17 @@ const columnSchema = new Schema<IColumn>(
     },
     autoCleanupMode: {
       type: String,
-      enum: ['HIDE', 'DELETE'],
-      default: undefined,
+      enum: ["HIDE", "DELETE", null],
+      default: null,
     },
     autoCleanupAfterDays: {
       type: Number,
-  
-      max: 365,
-      
+      default: null,
     },
   },
-  
+
   {
     timestamps: false,
-  }
+  },
 );
-
-
-export const Column = mongoose.model<IColumn>('Column', columnSchema);
+export const Column = mongoose.model<IColumn>("Column", columnSchema);
