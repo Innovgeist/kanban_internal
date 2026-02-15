@@ -88,7 +88,7 @@ export class ProjectService {
   }
 
   static async getProjectById(projectId: string) {
-    const project = await Project.findById(projectId).populate('createdBy', 'name email');
+    const project = await Project.findById(projectId).populate('createdBy', 'name email avatarUrl');
     if (!project) {
       throw new AppError('Project not found', 404, 'PROJECT_NOT_FOUND');
     }
