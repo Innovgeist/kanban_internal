@@ -2,6 +2,7 @@ import { Board } from './board.model';
 import { Column } from './columns/column.model';
 import { Card } from './columns/cards/card.model';
 import { AppError } from '../../../utils/errors';
+import { number } from 'zod';
 
 export class BoardService {
   static async createBoard(projectId: string, name: string) {
@@ -31,6 +32,30 @@ export class BoardService {
     const columns = await Column.find({ boardId })
       .sort({ order: 1 })
       .lean();
+     const now = new Date();
+
+     const hideColumns = columns.filter(
+       (c) => c.autoCleanupMode === "HIDE" && typeof c.autoCleanupAfterDays === "number"
+     );
+       if(hideColumns.length){
+        const bulkOps = hideColumns.map((col) =>{
+          const cuttOff = new Date(now.getTime() - col.autoCleanupAfterDays! *24 * 60 *60 * 1000);
+          const expiryDateExpr = { $ifNull:["$movedToColumnAt", "$createdAt"]};
+          return {
+            updateMany:{
+              filter:{
+                columnId: col._id,
+                isHidden: false,
+                deletedAt: null,
+                $expr:{$lte: [expiryDateExpr,cuttOff]},
+
+              },
+              update:{$set: {isHidden: true}},
+            },
+          };
+        });
+        await Card.bulkWrite(bulkOps);
+       }
 
     // Get cards for each column, grouped by column
     const columnIds = columns.map((col) => col._id);
@@ -49,6 +74,11 @@ export class BoardService {
       acc[colId].push(card);
       return acc;
     }, {} as Record<string, typeof cards>);
+    Object.keys(cardsByColumn).forEach((colId)=>{
+      cardsByColumn[colId].sort(
+        (a,b)=>new Date(b.createdAt).getTime()- new Date(a.createdAt).getTime()
+      )
+    })
 
     // Attach cards to columns
     const columnsWithCards = columns.map((column) => ({
