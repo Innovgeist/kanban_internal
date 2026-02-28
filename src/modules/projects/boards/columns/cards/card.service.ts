@@ -74,6 +74,7 @@ export class CardService {
       priority: priority || 'MEDIUM',
       expectedDeliveryDate: expectedDeliveryDate || undefined,
       assignedTo: assignedToIds.map(id => new Types.ObjectId(id)),
+      compleatedAt: compleatedAt || null,       
       order,
       createdBy,
     });
