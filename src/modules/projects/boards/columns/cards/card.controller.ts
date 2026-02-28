@@ -21,6 +21,7 @@ export class CardController {
         userId,
         normalizedPriority,
         parsedDate,
+        null,
         assignedTo
       );
 
