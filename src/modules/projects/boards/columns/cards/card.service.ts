@@ -2,12 +2,86 @@ import { Card, CardPriority } from './card.model';
 import { Column } from '../column.model';
 import { Board } from '../../board.model';
 import { ProjectMember } from '../../../projectMembers/projectMember.model';
+import { User } from '../../../../users/user.model';
 import { AppError } from '../../../../../utils/errors';
 import { validateObjectId } from '../../../../../utils/validation';
 import { Types } from 'mongoose';
 import { autoCleanupCards } from './autoCleanupCards';
+import { EmailService } from '../../../../../services/email.service';
+import logger from '../../../../../utils/logger';
+
+type RequestUser = {
+  _id: string;
+  name?: string;
+  email: string;
+};
 
 export class CardService {
+  private static async validateProjectUsers(projectId: string, userIds: string[]) {
+    if (userIds.length === 0) {
+      return;
+    }
+
+    for (const userId of userIds) {
+      if (!validateObjectId(userId)) {
+        throw new AppError(`Invalid user ID: ${userId}`, 400, 'INVALID_USER_ID');
+      }
+    }
+
+    const members = await ProjectMember.find({
+      projectId,
+      userId: { $in: userIds },
+    });
+
+    if (members.length !== userIds.length) {
+      throw new AppError(
+        'One or more selected users are not project members',
+        400,
+        'USER_NOT_PROJECT_MEMBER'
+      );
+    }
+  }
+
+  private static async sendReviewRequestEmail(params: {
+    reviewerId: string;
+    title: string;
+    projectName?: string;
+    boardName?: string;
+    columnName?: string;
+    requestedBy?: RequestUser;
+  }) {
+    if (!EmailService.isConfigured()) {
+      return false;
+    }
+
+    const reviewer = await User.findById(params.reviewerId).select('name email').lean();
+    if (!reviewer?.email) {
+      return false;
+    }
+
+    const requestedBy = params.requestedBy?.name || params.requestedBy?.email || 'A teammate';
+    const location = [params.projectName, params.boardName, params.columnName].filter(Boolean).join(' / ');
+
+    try {
+      await EmailService.sendMail({
+        to: [reviewer.email],
+        subject: `Review requested: ${params.title}`,
+        text: `${requestedBy} requested your review for "${params.title}"${location ? ` in ${location}` : ''}.`,
+        html: `
+          <div>
+            <p>Hello <strong>${reviewer.name || reviewer.email}</strong>,</p>
+            <p><strong>${requestedBy}</strong> requested your review for <strong>${params.title}</strong>.</p>
+            ${location ? `<p><strong>Location:</strong> ${location}</p>` : ''}
+          </div>
+        `,
+      });
+      return true;
+    } catch (error) {
+      logger.error(`Failed to send review request email to reviewer ${params.reviewerId}`, error);
+      return false;
+    }
+  }
+
   static async createCard(
     columnId: string,
     title: string,
@@ -16,7 +90,9 @@ export class CardService {
     priority?: CardPriority,
     expectedDeliveryDate?: Date | null,
     compleatedAt?: Date | null,
-    assignedTo?: string[]
+    assignedTo?: string[],
+    reviewerId?: string | null,
+    requestedBy?: RequestUser
   ) {
     // Verify column exists
     const column = await Column.findById(columnId);
@@ -33,30 +109,12 @@ export class CardService {
     // Validate assigned users if provided
     let assignedToIds: string[] = [];
     if (assignedTo && assignedTo.length > 0) {
-      // Validate all user IDs
-      for (const userId of assignedTo) {
-        if (!validateObjectId(userId)) {
-          throw new AppError(`Invalid user ID: ${userId}`, 400, 'INVALID_USER_ID');
-        }
-      }
-
-      // Verify all users are project members
-      const members = await ProjectMember.find({
-        projectId: board.projectId,
-        userId: { $in: assignedTo },
-      });
-
-      if (members.length !== assignedTo.length) {
-        const foundUserIds = members.map(m => m.userId.toString());
-        const invalidUserIds = assignedTo.filter(id => !foundUserIds.includes(id));
-        throw new AppError(
-          `One or more assigned users are not project members`,
-          400,
-          'USER_NOT_PROJECT_MEMBER'
-        );
-      }
-
+      await this.validateProjectUsers(board.projectId.toString(), assignedTo);
       assignedToIds = assignedTo;
+    }
+
+    if (reviewerId !== undefined && reviewerId !== null) {
+      await this.validateProjectUsers(board.projectId.toString(), [reviewerId]);
     }
 
     // Get max order value
@@ -74,14 +132,34 @@ export class CardService {
       priority: priority || 'MEDIUM',
       expectedDeliveryDate: expectedDeliveryDate || undefined,
       assignedTo: assignedToIds.map(id => new Types.ObjectId(id)),
+      reviewerId: reviewerId ? new Types.ObjectId(reviewerId) : null,
+      reviewRequestedAt: reviewerId ? new Date() : null,
+      reviewRequestEmailSentAt: null,
       compleatedAt: compleatedAt || null,       
       order,
       createdBy,
     });
 
+    if (reviewerId) {
+      const emailSent = await this.sendReviewRequestEmail({
+        reviewerId,
+        title,
+        projectName: undefined,
+        boardName: undefined,
+        columnName: column.name,
+        requestedBy,
+      });
+
+      if (emailSent) {
+        card.reviewRequestEmailSentAt = new Date();
+        await card.save();
+      }
+    }
+
     return card.populate([
       { path: 'createdBy', select: 'name email avatarUrl' },
       { path: 'assignedTo', select: 'name email avatarUrl' },
+      { path: 'reviewerId', select: 'name email avatarUrl' },
     ]);
   }
 
@@ -123,6 +201,7 @@ export class CardService {
     return card.populate([
       { path: 'createdBy', select: 'name email' },
       { path: 'assignedTo', select: 'name email' },
+      { path: 'reviewerId', select: 'name email' },
     ]);
   }
 
@@ -132,7 +211,9 @@ export class CardService {
     description?: string,
     priority?: CardPriority | null,
     expectedDeliveryDate?: Date | null,
-    assignedTo?: string[]
+    assignedTo?: string[],
+    reviewerId?: string | null,
+    requestedBy?: RequestUser
   ) {
     const card = await Card.findById(cardId);
     if (!card) {
@@ -150,6 +231,8 @@ export class CardService {
       throw new AppError('Board not found', 404, 'BOARD_NOT_FOUND');
     }
 
+    const previousReviewerId = card.reviewerId?.toString() || null;
+
     card.title = title;
     if (description !== undefined) {
       card.description = description;
@@ -166,27 +249,7 @@ export class CardService {
     // Validate assigned users if provided
     if (assignedTo !== undefined) {
       if (assignedTo.length > 0) {
-        // Validate all user IDs
-        for (const userId of assignedTo) {
-          if (!validateObjectId(userId)) {
-            throw new AppError(`Invalid user ID: ${userId}`, 400, 'INVALID_USER_ID');
-          }
-        }
-
-        // Verify all users are project members
-        const members = await ProjectMember.find({
-          projectId: board.projectId,
-          userId: { $in: assignedTo },
-        });
-
-        if (members.length !== assignedTo.length) {
-          throw new AppError(
-            `One or more assigned users are not project members`,
-            400,
-            'USER_NOT_PROJECT_MEMBER'
-          );
-        }
-
+        await this.validateProjectUsers(board.projectId.toString(), assignedTo);
         card.assignedTo = assignedTo.map(id => new Types.ObjectId(id)) as any;
       } else {
         // Empty array - remove all assignments
@@ -194,11 +257,43 @@ export class CardService {
       }
     }
 
+    if (reviewerId !== undefined) {
+      if (reviewerId) {
+        await this.validateProjectUsers(board.projectId.toString(), [reviewerId]);
+        card.reviewerId = new Types.ObjectId(reviewerId) as any;
+        if (previousReviewerId !== reviewerId) {
+          card.reviewRequestedAt = new Date();
+          card.reviewRequestEmailSentAt = null;
+        }
+      } else {
+        card.reviewerId = null as any;
+        card.reviewRequestedAt = null;
+        card.reviewRequestEmailSentAt = null;
+      }
+    }
+
     await card.save();
+
+    if (reviewerId && previousReviewerId !== reviewerId) {
+      const emailSent = await this.sendReviewRequestEmail({
+        reviewerId,
+        title: card.title,
+        projectName: undefined,
+        boardName: undefined,
+        columnName: column.name,
+        requestedBy,
+      });
+
+      if (emailSent) {
+        card.reviewRequestEmailSentAt = new Date();
+        await card.save();
+      }
+    }
 
     return card.populate([
       { path: 'createdBy', select: 'name email' },
       { path: 'assignedTo', select: 'name email' },
+      { path: 'reviewerId', select: 'name email' },
     ]);
   }
 

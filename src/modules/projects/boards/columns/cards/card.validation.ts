@@ -19,6 +19,7 @@ export const createCardSchema = z.object({
     priority: priorityEnum.optional(),
     expectedDeliveryDate: dateSchema.optional(),
     assignedTo: z.array(z.string()).optional(),
+    reviewerId: z.union([z.string(), z.null()]).optional(),
   }),
 });
 
@@ -36,5 +37,6 @@ export const updateCardSchema = z.object({
     priority: z.union([priorityEnum, z.null()]).optional(),
     expectedDeliveryDate: dateSchema.optional(),
     assignedTo: z.array(z.string()).optional(),
+    reviewerId: z.union([z.string(), z.null()]).optional(),
   }),
 });
