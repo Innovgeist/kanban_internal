@@ -1,6 +1,7 @@
 import app from './app';
 import { connectDatabase } from './config/database';
 import { config } from './config/env';
+import { startNotificationScheduler } from './modules/notifications/notification.scheduler';
 import logger from './utils/logger';
 
 // Initialize database connection (cached for serverless)
@@ -30,6 +31,7 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
 
   connectDatabase()
     .then(() => {
+      startNotificationScheduler();
       app.listen(PORT, () => {
         logger.info(`Server is running on port ${PORT}`);
         logger.info(`Environment: ${config.nodeEnv}`);

@@ -5,7 +5,7 @@ export class CardController {
   static async create(req: Request, res: Response, next: NextFunction) {
     try {
       const { columnId } = req.params;
-      const { title, description, priority, expectedDeliveryDate, assignedTo } = req.body;
+      const { title, description, priority, expectedDeliveryDate, assignedTo, reviewerId } = req.body;
       const userId = req.user!._id;
 
       // Convert priority to uppercase if provided
@@ -22,7 +22,9 @@ export class CardController {
         normalizedPriority,
         parsedDate,
         null,
-        assignedTo
+        assignedTo,
+        reviewerId,
+        req.user
       );
 
       res.status(201).json({
@@ -54,7 +56,7 @@ export class CardController {
     try {
       // Get cardId from params (set by requireCardAccess middleware) or extract from path
       const cardId = (req as any).cardId || req.params.cardId;
-      const { title, description, priority, expectedDeliveryDate, assignedTo } = req.body;
+      const { title, description, priority, expectedDeliveryDate, assignedTo, reviewerId } = req.body;
 
       if (!cardId) {
         throw new Error('Card ID is required');
@@ -72,7 +74,9 @@ export class CardController {
         description,
         normalizedPriority,
         parsedDate,
-        assignedTo
+        assignedTo,
+        reviewerId,
+        req.user
       );
 
       res.status(200).json({

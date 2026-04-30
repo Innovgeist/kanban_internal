@@ -12,6 +12,10 @@ declare global {
         _id: string;
         email: string;
         role?: string;
+        name?: string;
+        authProvider?: string;
+        avatarUrl?: string | null;
+        createdAt?: Date;
       };
     }
   }
@@ -31,16 +35,22 @@ export const authenticate = async (
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, config.jwt.accessSecret) as TokenPayload;
 
-    // Verify user still exists
-    const user = await User.findById(decoded.userId);
+    // Fetch the user once here so downstream handlers can reuse it.
+    const user = await User.findById(decoded.userId)
+      .select('_id name email role authProvider avatarUrl createdAt')
+      .lean();
     if (!user) {
       throw new AppError('User not found', 401, 'USER_NOT_FOUND');
     }
 
     req.user = {
-      _id: decoded.userId,
-      email: decoded.email,
-      role: decoded.role,
+      _id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      authProvider: user.authProvider,
+      avatarUrl: user.avatarUrl ?? null,
+      createdAt: user.createdAt,
     };
 
     next();

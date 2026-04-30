@@ -6,7 +6,6 @@ import { AppError } from '../../utils/errors';
 import { JsonWebTokenError } from 'jsonwebtoken';
 import { config } from '../../config/env';
 import jwt from 'jsonwebtoken';
-import { User } from '../users/user.model';
 
 
 export class AuthController {
@@ -174,17 +173,9 @@ export class AuthController {
  
   static async me(req: Request, res: Response, next: NextFunction) {
   try {
-    const userId = req.user?._id;
-    if (!userId) {
-      throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
-    }
-
-    const user = await User.findById(userId).select(
-      "_id name email role authProvider avatarUrl createdAt"
-    );
-
+    const user = req.user;
     if (!user) {
-      throw new AppError("User not found", 404, "USER_NOT_FOUND");
+      throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
     }
 
     res.status(200).json({
